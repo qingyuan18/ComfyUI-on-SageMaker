@@ -17,7 +17,6 @@ fi
 
 #load public ECR image
 #aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-docker pull public.ecr.aws/o7x6j3x6/sd-dreambooth-finetuning-v2
 
 # Log into Docker
 pwd=$(aws ecr get-login-password --region ${region})
@@ -26,7 +25,7 @@ docker login --username AWS -p ${pwd} ${account}.dkr.ecr.${region}.amazonaws.com
 # Build the docker image locally with the image name and then push it to ECR
 # with the full name.
 git clone https://github.com/comfyanonymous/ComfyUI.git
-docker build -t ${algorithm_name}  ./ -f ./dockerfile
+docker build -t ${algorithm_name}  ./ -f ./dockerfile-simple
 docker tag ${algorithm_name} ${fullname}
 docker push ${fullname}
 rm -rf ./ComfyUI

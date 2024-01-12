@@ -37,7 +37,7 @@ async def version():
     """
     version /api/v1 show version
     """
-    return {"server": "StableDiffusionQuickKit","version":"v1.0.0"}
+    return {"server": "ComfyUISageMaker","version":"v1.0.0"}
 
 
 @app.post('/invocations')

@@ -17,7 +17,15 @@
 """uvicorn main module"""
 import os
 import uvicorn
+import subprocess
 
 reload=os.environ.get("reload", False)
 if __name__ == '__main__':
+    process = subprocess.Popen(
+                ["nohup", "python3","/opt/program/main.py","--listen","0.0.0.0","&"],
+                stdout=subprocess.STDOUT, stderr=subprocess.STDOUT, preexec_fn=os.setpgrp)
+    if process.returncode is not None:
+            raise RuntimeError("Failed to start stable diffusion process.")
+    time.sleep(100)
+
     uvicorn.run('api_server:app',host='0.0.0.0',port=8080,reload=reload,log_level='info')
