@@ -1,34 +1,7 @@
 {
-  "last_node_id": 190,
-  "last_link_id": 327,
+  "last_node_id": 191,
+  "last_link_id": 328,
   "nodes": [
-    {
-      "id": 190,
-      "type": "SaveImage",
-      "pos": [
-        1848,
-        298
-      ],
-      "size": {
-        "0": 728.6649780273438,
-        "1": 690.25537109375
-      },
-      "flags": {},
-      "order": 34,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 326,
-          "slot_index": 0
-        }
-      ],
-      "properties": {},
-      "widgets_values": [
-        "ComfyUI"
-      ]
-    },
     {
       "id": 10,
       "type": "CLIPSetLastLayer",
@@ -308,65 +281,6 @@
         1.0000000000000007,
         0,
         1
-      ]
-    },
-    {
-      "id": 57,
-      "type": "TimestepKeyframe",
-      "pos": [
-        -148,
-        689
-      ],
-      "size": {
-        "0": 506.4000244140625,
-        "1": 214
-      },
-      "flags": {},
-      "order": 26,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "control_net_weights",
-          "type": "CONTROL_NET_WEIGHTS",
-          "link": null
-        },
-        {
-          "name": "t2i_adapter_weights",
-          "type": "T2I_ADAPTER_WEIGHTS",
-          "link": null
-        },
-        {
-          "name": "latent_keyframe",
-          "type": "LATENT_KEYFRAME",
-          "link": 296,
-          "slot_index": 2
-        },
-        {
-          "name": "prev_timestep_keyframe",
-          "type": "TIMESTEP_KEYFRAME",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "TIMESTEP_KEYFRAME",
-          "type": "TIMESTEP_KEYFRAME",
-          "links": [
-            95
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "TimestepKeyframe"
-      },
-      "widgets_values": [
-        0,
-        1,
-        0,
-        true,
-        true
       ]
     },
     {
@@ -757,47 +671,6 @@
       ]
     },
     {
-      "id": 58,
-      "type": "LatentKeyframe",
-      "pos": [
-        -95,
-        865
-      ],
-      "size": {
-        "0": 456,
-        "1": 82
-      },
-      "flags": {},
-      "order": 24,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "prev_latent_keyframe",
-          "type": "LATENT_KEYFRAME",
-          "link": 254,
-          "slot_index": 0
-        }
-      ],
-      "outputs": [
-        {
-          "name": "LATENT_KEYFRAME",
-          "type": "LATENT_KEYFRAME",
-          "links": [
-            296
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LatentKeyframe"
-      },
-      "widgets_values": [
-        0,
-        1
-      ]
-    },
-    {
       "id": 70,
       "type": "LatentKeyframe",
       "pos": [
@@ -1147,47 +1020,6 @@
       ]
     },
     {
-      "id": 8,
-      "type": "VAEDecode",
-      "pos": [
-        1401,
-        -4
-      ],
-      "size": {
-        "0": 210,
-        "1": 46
-      },
-      "flags": {},
-      "order": 32,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "samples",
-          "type": "LATENT",
-          "link": 75
-        },
-        {
-          "name": "vae",
-          "type": "VAE",
-          "link": 13
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            312,
-            326
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "VAEDecode"
-      }
-    },
-    {
       "id": 52,
       "type": "CheckpointLoaderSimpleWithNoiseSelect",
       "pos": [
@@ -1408,6 +1240,38 @@
       ]
     },
     {
+      "id": 11,
+      "type": "VAELoader",
+      "pos": [
+        1278,
+        139
+      ],
+      "size": {
+        "0": 463.302734375,
+        "1": 177.31182861328125
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            13
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "vae-ft-mse-840000-ema-pruned.safetensors"
+      ]
+    },
+    {
       "id": 64,
       "type": "LoadImage",
       "pos": [
@@ -1419,7 +1283,7 @@
         "1": 314
       },
       "flags": {},
-      "order": 5,
+      "order": 6,
       "mode": 0,
       "outputs": [
         {
@@ -1447,47 +1311,155 @@
       ]
     },
     {
-      "id": 11,
-      "type": "VAELoader",
+      "id": 57,
+      "type": "TimestepKeyframe",
       "pos": [
-        1278,
-        139
+        -129,
+        664
       ],
       "size": {
-        "0": 463.302734375,
-        "1": 177.31182861328125
+        "0": 506.4000244140625,
+        "1": 214
       },
       "flags": {},
-      "order": 6,
+      "order": 26,
       "mode": 0,
+      "inputs": [
+        {
+          "name": "control_net_weights",
+          "type": "CONTROL_NET_WEIGHTS",
+          "link": null
+        },
+        {
+          "name": "t2i_adapter_weights",
+          "type": "T2I_ADAPTER_WEIGHTS",
+          "link": null
+        },
+        {
+          "name": "latent_keyframe",
+          "type": "LATENT_KEYFRAME",
+          "link": 296,
+          "slot_index": 2
+        },
+        {
+          "name": "prev_timestep_keyframe",
+          "type": "TIMESTEP_KEYFRAME",
+          "link": null
+        }
+      ],
       "outputs": [
         {
-          "name": "VAE",
-          "type": "VAE",
+          "name": "TIMESTEP_KEYFRAME",
+          "type": "TIMESTEP_KEYFRAME",
           "links": [
-            13
+            95
           ],
           "shape": 3,
           "slot_index": 0
         }
       ],
       "properties": {
-        "Node name for S&R": "VAELoader"
+        "Node name for S&R": "TimestepKeyframe"
       },
       "widgets_values": [
-        "vae-ft-mse-840000-ema-pruned.safetensors"
+        0,
+        1,
+        0,
+        true,
+        true
       ]
     },
     {
-      "id": 183,
-      "type": "ADE_AnimateDiffCombine",
+      "id": 58,
+      "type": "LatentKeyframe",
       "pos": [
-        1795,
-        -408
+        -120,
+        877
       ],
       "size": {
-        "0": 999.5999755859375,
-        "1": 519.5999755859375
+        "0": 456,
+        "1": 82
+      },
+      "flags": {},
+      "order": 24,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "prev_latent_keyframe",
+          "type": "LATENT_KEYFRAME",
+          "link": 254,
+          "slot_index": 0
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT_KEYFRAME",
+          "type": "LATENT_KEYFRAME",
+          "links": [
+            296
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LatentKeyframe"
+      },
+      "widgets_values": [
+        0,
+        1
+      ]
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [
+        1401,
+        -4
+      ],
+      "size": {
+        "0": 210,
+        "1": 46
+      },
+      "flags": {},
+      "order": 32,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 75
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            328
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      }
+    },
+    {
+      "id": 191,
+      "type": "VHS_VideoCombine",
+      "pos": [
+        1993,
+        -46
+      ],
+      "size": {
+        "0": 315,
+        "1": 250
       },
       "flags": {},
       "order": 33,
@@ -1496,28 +1468,28 @@
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 312
+          "link": 328
         }
       ],
-      "outputs": [
-        {
-          "name": "GIF",
-          "type": "GIF",
-          "links": null,
-          "shape": 3
-        }
-      ],
+      "outputs": [],
       "properties": {
-        "Node name for S&R": "ADE_AnimateDiffCombine"
+        "Node name for S&R": "VHS_VideoCombine"
       },
-      "widgets_values": [
-        16,
-        36,
-        "Enabled",
-        "image/gif",
-        false,
-        true
-      ]
+      "widgets_values": {
+        "frame_rate": 8,
+        "loop_count": 0,
+        "filename_prefix": "AnimateDiff",
+        "format": "image/gif",
+        "pingpong": false,
+        "save_image": true,
+        "crf": 20,
+        "save_metadata": true,
+        "audio_file": "",
+        "videopreview": {
+          "hidden": false,
+          "paused": false
+        }
+      }
     }
   ],
   "links": [
@@ -1818,18 +1790,10 @@
       "CONDITIONING"
     ],
     [
-      312,
+      328,
       8,
       0,
-      183,
-      0,
-      "IMAGE"
-    ],
-    [
-      326,
-      8,
-      0,
-      190,
+      191,
       0,
       "IMAGE"
     ]

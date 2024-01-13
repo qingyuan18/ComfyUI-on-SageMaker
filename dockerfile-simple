@@ -17,6 +17,7 @@ RUN pip install torch torchvision --upgrade --index-url https://download.pytorch
 RUN wget https://huggingface.co/nergaldarski/CardosAnimeV2.0/resolve/main/cardosAnime_v20.safetensors
 RUN wget https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt/resolve/main/svd_xt.safetensors
 RUN wget https://huggingface.co/guoyww/animatediff/resolve/main/mm_sd_v15.ckpt
+RUN wget https://huggingface.co/guoyww/animatediff/resolve/main/mm_sdxl_v10_beta.ckpt
 RUN wget https://huggingface.co/mmmoof1/vae-ft-mse-840000-ema-pruned/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors
 RUN wget https://huggingface.co/latent-consistency/lcm-lora-sdv1-5/resolve/main/pytorch_lora_weights.safetensors
 

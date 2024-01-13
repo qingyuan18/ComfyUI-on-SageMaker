@@ -26,6 +26,7 @@ RUN wget https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_
 RUN wget https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_lineart.pth
 RUN wget https://huggingface.co/guoyww/animatediff/resolve/main/mm_sd_v15.ckpt
 RUN wget https://huggingface.co/guoyww/animatediff/resolve/main/mm_sd_v15_v2.ckpt
+RUN wget https://huggingface.co/guoyww/animatediff/resolve/main/mm_sdxl_v10_beta.ckpt
 RUN wget https://huggingface.co/guoyww/animatediff/resolve/main/v2_lora_TiltDown.ckpt
 RUN wget https://huggingface.co/guoyww/animatediff/resolve/main/v2_lora_PanRight.ckpt
 RUN wget https://huggingface.co/guoyww/animatediff/resolve/main/v2_lora_RollingAnticlockwise.ckpt
