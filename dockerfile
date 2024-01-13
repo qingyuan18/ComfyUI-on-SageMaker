@@ -41,12 +41,13 @@ RUN mv ./*.pth /opt/program/models/controlnet/
 
 
 ###install relevant ComfyUI nodes
-RUN git clone https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet.git /opt/program/custom_nodes/ComfyUI-Advanced-ControlNet
+RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/program/custom_nodes/ComfyUI-Manager
 
 RUN git clone https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved.git /opt/program/custom_nodes/ComfyUI-AnimateDiff-Evolved
 RUN mv ./mm_sd*.ckpt /opt/program/custom_nodes/ComfyUI-AnimateDiff-Evolved/models/
-RUN mv ./v2_lora*.ckpt /opt/program/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora/
 
+RUN git clone https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet.git /opt/program/custom_nodes/ComfyUI-Advanced-ControlNet
+RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git /opt/program/custom_nodes/comfyui_controlnet_aux
 RUN git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git /opt/program/custom_nodes/ComfyUI-VideoHelperSuite
 
 ####install relevant http/socket client（for unicorn web server）
