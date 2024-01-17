@@ -5,9 +5,12 @@ import urllib.request
 import urllib.parse
 import base64
 from pydantic import BaseModel, Field
+from PIL import Image
+import io
+import sys
 WORKING_DIR="/tmp/"
 
-def write_gif_to_s3(gifs,output_s3uri=""):
+def write_gif_to_s3(images,output_s3uri=""):
     """
     write image to s3 bucket
     """
@@ -22,10 +25,11 @@ def write_gif_to_s3(gifs,output_s3uri=""):
     
     for node_id in images:
         for image_data in images[node_id]:
-            from PIL import Image
-            import io
+            bucket, key = get_bucket_and_key(output_s3uri)
+            key = f'{key}{uuid.uuid4()}.jpg'
             GIF_LOCATION = "{}/Comfyui_{}.gif".format(WORKING_DIR, node_id)
             print(GIF_LOCATION)
+            key = f'{key}Comfyui_{node_id}.gif'
             with open(GIF_LOCATION, "wb") as binary_file:
                 # Write bytes to file
                 binary_file.write(image_data)
@@ -44,6 +48,7 @@ def write_imgage_to_s3(images,output_s3uri=""):
     """
     s3_client = boto3.client('s3')
     bucket = os.environ.get("s3_bucket", "")
+    key = "/comfyui_output/images/"
     prediction = []
 
     default_output_s3uri = f's3://{s3_bucket}/comfyui_output/images/'
@@ -71,15 +76,16 @@ def write_imgage_to_s3(images,output_s3uri=""):
     return prediction
 
 class InferenceOpt(BaseModel):
-    prompt: str = "a photo of an astronaut riding a horse on mars"
+    client_id:str = ""
+    prompt: dict = None
     negative_prompt: str = ""
     steps: int = 20
     inference_type: str = "txt2img"
 
 server_address = "localhost:8188"
-client_id = str(uuid.uuid4())
 
-def queue_prompt(prompt):
+
+def queue_prompt(prompt,client_id):
     print(prompt)
     p = {"prompt": prompt, "client_id": client_id}
     data = json.dumps(p).encode('utf-8')
@@ -103,8 +109,8 @@ def get_history(prompt_id):
     with urllib.request.urlopen("http://{}/history/{}".format(server_address, prompt_id)) as response:
         return json.loads(response.read())
 
-def get_images(ws, prompt):
-    prompt_id = queue_prompt(prompt)['prompt_id']
+def get_images(ws, prompt,client_id):
+    prompt_id = queue_prompt(prompt,client_id)['prompt_id']
     print("prompt_id=="+prompt_id)
     output_images = {}
     while True:
@@ -117,7 +123,6 @@ def get_images(ws, prompt):
                     break #Execution is done
         else:
             continue #previews are binary data
-
     history = get_history(prompt_id)[prompt_id]
     for o in history['outputs']:
         print("output==")
@@ -141,37 +146,28 @@ def get_images(ws, prompt):
                     video_data = get_image(video['filename'], video['subfolder'], video['type'])
                     videos_output.append(video_data)
                 output_images[node_id] = videos_output
-
     return output_images
 
 def predict_fn(opt:InferenceOpt):
+    prediction=[]
+    rompt = opt.prompt
+    client_id = opt.client_id
     try:
-        prompt = json.loads(InferenceOpt.prompt_text)
-        if InferenceOpt.inference_type == "text2img":
+        if opt.inference_type == "text2img":
             ws = websocket.WebSocket()
             ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
-            images = get_images(ws, prompt)
+            images = get_images(ws, prompt,client_id)
             prediction=write_imgage_to_s3(images)
-        else if InferenceOpt.inference_type == "text2vid":
+        elif opt.inference_type == "text2vid":
             ws = websocket.WebSocket()
             ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
             start_dt=time.time()
-            images = get_images(ws, prompt)
+            images = get_images(ws, prompt,client_id)
             end_dt=time.time()
             print("time elapse:{:.6f} seconds".format(end_dt-start_dt))
-            
-            for node_id in images:
-                for image_data in images[node_id]:
-                    from PIL import Image
-                    import io
-                    GIF_LOCATION = "{}/Comfyui_{}.gif".format(WORKING_DIR, node_id)
-                    print(GIF_LOCATION)
-                    with open(GIF_LOCATION, "wb") as binary_file:
-                        # Write bytes to file
-                        binary_file.write(image_data)
+            prediction=write_gif_to_s3(images)
     except Exception as ex:
         traceback.print_exc(file=sys.stdout)
         print(f"=================Exception=================\n{ex}")
-
     print('prediction: ', prediction)
     return prediction
