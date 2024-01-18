@@ -27,6 +27,7 @@ if __name__ == '__main__':
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, preexec_fn=os.setpgrp)
     if process.returncode is not None:
             raise RuntimeError("Failed to start ComfyUI process.")
-    time.sleep(100)
+    time.sleep(20)
+    print("comfyui started!")
 
     uvicorn.run('api_server:app',host='0.0.0.0',port=8080,reload=reload,log_level='info')

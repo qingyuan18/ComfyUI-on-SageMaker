@@ -81,6 +81,7 @@ class InferenceOpt(BaseModel):
     negative_prompt: str = ""
     steps: int = 20
     inference_type: str = "txt2img"
+    method:str = ""
 
 server_address = "localhost:8188"
 
@@ -109,20 +110,19 @@ def get_history(prompt_id):
     with urllib.request.urlopen("http://{}/history/{}".format(server_address, prompt_id)) as response:
         return json.loads(response.read())
 
-def get_images(ws, prompt,client_id):
-    prompt_id = queue_prompt(prompt,client_id)['prompt_id']
-    print("prompt_id=="+prompt_id)
-    output_images = {}
-    while True:
-        out = ws.recv()
-        if isinstance(out, str):
-            message = json.loads(out)
-            if message['type'] == 'executing':
-                data = message['data']
-                if data['node'] is None and data['prompt_id'] == prompt_id:
-                    break #Execution is done
-        else:
-            continue #previews are binary data
+def get_status(ws,prompt_id):
+    status="executing"
+    out = ws.recv()
+    if isinstance(out, str):
+        message = json.loads(out)
+        if message['type'] == 'executing':
+            data = message['data']
+            if data['node'] is None and data['prompt_id'] == prompt_id:
+                status="done"
+    return status
+
+    
+def get_images(prompt_id):
     history = get_history(prompt_id)[prompt_id]
     for o in history['outputs']:
         print("output==")
@@ -150,22 +150,37 @@ def get_images(ws, prompt,client_id):
 
 def predict_fn(opt:InferenceOpt):
     prediction=[]
-    rompt = opt.prompt
+    prompt_id = opt.prompt_id
+    status = ""
+    prompt = opt.prompt
     client_id = opt.client_id
     try:
-        if opt.inference_type == "text2img":
+        if opt.method == "queue_prompt":
+            prompt_id = queue_prompt(prompt,client_id)['prompt_id']
+            return prompt_id
+        if opt.method == "get_status":
             ws = websocket.WebSocket()
             ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
-            images = get_images(ws, prompt,client_id)
-            prediction=write_imgage_to_s3(images)
-        elif opt.inference_type == "text2vid":
-            ws = websocket.WebSocket()
-            ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
-            start_dt=time.time()
-            images = get_images(ws, prompt,client_id)
-            end_dt=time.time()
-            print("time elapse:{:.6f} seconds".format(end_dt-start_dt))
-            prediction=write_gif_to_s3(images)
+            status = get_status(ws,prompt_id)
+            ws.close()
+            return status
+        if opt.method == "get_images":
+            get_images(prompt_id)
+            if opt.inference_type == "text2img":
+                ws = websocket.WebSocket()
+                ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
+                images = get_images(ws, prompt_id,client_id)
+                ws.close()
+                prediction=write_imgage_to_s3(images)
+            elif opt.inference_type == "text2vid":
+                ws = websocket.WebSocket()
+                ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
+                start_dt=time.time()
+                images = get_images(ws, prompt_id,client_id)
+                end_dt=time.time()
+                ws.close()
+                print("time elapse:{:.6f} seconds".format(end_dt-start_dt))
+                prediction=write_gif_to_s3(images)
     except Exception as ex:
         traceback.print_exc(file=sys.stdout)
         print(f"=================Exception=================\n{ex}")
