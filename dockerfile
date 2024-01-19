@@ -61,4 +61,4 @@ RUN pip3 install pydantic
 RUN chmod 755 /opt/program
 WORKDIR /opt/program
 RUN chmod 755 serve
-RUN /opt/program/serve
+ENTRYPOINT ["python","/opt/program/serve"]

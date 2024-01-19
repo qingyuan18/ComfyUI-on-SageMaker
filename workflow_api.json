@@ -1,28 +1,62 @@
 {
   "1": {
     "inputs": {
-      "ckpt_name": "v1-5-pruned-emaonly.safetensors"
+      "ckpt_name": "cardosAnime_v20.safetensors",
+      "beta_schedule": "sqrt_linear (AnimateDiff)"
     },
-    "class_type": "CheckpointLoaderSimple"
+    "class_type": "CheckpointLoaderSimpleWithNoiseSelect"
   },
   "3": {
     "inputs": {
-      "model_name": "mm_sd_v15_v2.ckpt",
+      "text": "(Masterpiece, best quality:1.2), closeup, a girl on a snowy winter day",
+      "clip": [
+        "1",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "6": {
+    "inputs": {
+      "text": "(bad quality, worst quality:1.2)",
+      "clip": [
+        "1",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "10": {
+    "inputs": {
+      "samples": [
+        "101",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    },
+    "class_type": "VAEDecode"
+  },
+  "93": {
+    "inputs": {
+      "model_name": "mm_sd_v15.ckpt",
       "beta_schedule": "sqrt_linear (AnimateDiff)",
       "motion_scale": 1,
-      "apply_v2_models_properly": true,
+      "apply_v2_models_properly": false,
       "model": [
         "1",
         0
       ],
       "context_options": [
-        "4",
+        "94",
         0
       ]
     },
     "class_type": "ADE_AnimateDiffLoaderWithContext"
   },
-  "4": {
+  "94": {
     "inputs": {
       "context_length": 16,
       "context_stride": 1,
@@ -32,117 +66,54 @@
     },
     "class_type": "ADE_AnimateDiffUniformContextOptions"
   },
-  "5": {
+  "101": {
     "inputs": {
-      "vae_name": "vae-ft-mse-840000-ema-pruned.safetensors"
-    },
-    "class_type": "VAELoader"
-  },
-  "6": {
-    "inputs": {
-      "text": "1girl, solo, outdoor, autumn season, golden leaves, red leaves, falling leaves, black eyes, upper body, from side",
-      "clip": [
-        "1",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode"
-  },
-  "7": {
-    "inputs": {
-      "text": "(worst quality, low quality:1.4)",
-      "clip": [
-        "1",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode"
-  },
-  "8": {
-    "inputs": {
-      "sampling": "lcm",
-      "zsnr": false,
-      "model": [
-        "3",
-        0
-      ]
-    },
-    "class_type": "ModelSamplingDiscrete"
-  },
-  "9": {
-    "inputs": {
-      "seed": 888888892,
-      "steps": 30,
-      "cfg": 1.5,
-      "sampler_name": "ddpm",
-      "scheduler": "sgm_uniform",
+      "seed": 0,
+      "steps": 20,
+      "cfg": 8,
+      "sampler_name": "euler",
+      "scheduler": "normal",
       "denoise": 1,
       "model": [
-        "8",
+        "93",
         0
       ],
       "positive": [
-        "6",
+        "3",
         0
       ],
       "negative": [
-        "7",
+        "6",
         0
       ],
       "latent_image": [
-        "10",
+        "107",
         0
       ]
     },
     "class_type": "KSampler"
   },
-  "10": {
+  "107": {
     "inputs": {
-      "width": 512,
-      "height": 512,
-      "batch_size": 24
+      "width": 800,
+      "height": 800,
+      "batch_size": 50
     },
-    "class_type": "EmptyLatentImage"
+    "class_type": "ADE_EmptyLatentImageLarge"
   },
-  "14": {
+  "110": {
     "inputs": {
       "frame_rate": 8,
       "loop_count": 0,
-      "filename_prefix": "AnimateDiff_LCM",
+      "filename_prefix": "AnimateDiff",
       "format": "image/gif",
       "pingpong": false,
-      "save_image": true,
-      "crf": 20,
-      "save_metadata": true,
-      "audio_file": "",
-      "videopreview": {
-        "hidden": false,
-        "paused": false,
-        "params": {
-          "filename": "AnimateDiff_LCM_00008.gif",
-          "subfolder": "",
-          "type": "output",
-          "format": "image/gif"
-        }
-      },
+      "save_output": true,
       "images": [
-        "16",
+        "10",
         0
       ]
     },
     "class_type": "VHS_VideoCombine"
-  },
-  "16": {
-    "inputs": {
-      "samples": [
-        "9",
-        0
-      ],
-      "vae": [
-        "5",
-        0
-      ]
-    },
-    "class_type": "VAEDecode"
   }
 }

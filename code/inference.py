@@ -8,21 +8,30 @@ from pydantic import BaseModel, Field
 from PIL import Image
 import io
 import sys
-WORKING_DIR="/tmp/"
+import boto3
+import os
+import traceback
+WORKING_DIR="/tmp"
+
+def get_bucket_and_key(s3uri):
+    """
+    get_bucket_and_key is helper function
+    """
+    pos = s3uri.find('/', 5)
+    bucket = s3uri[5: pos]
+    key = s3uri[pos + 1:]
+    return bucket, key
 
 def write_gif_to_s3(images,output_s3uri=""):
     """
     write image to s3 bucket
     """
     s3_client = boto3.client('s3')
-    bucket = os.environ.get("s3_bucket", "")
+    s3_bucket = os.environ.get("s3_bucket", "sagemaker-us-west-2-687912291502")
     prediction = []
-    
-    
     default_output_s3uri = f's3://{s3_bucket}/comfyui_output/images/'
     if output_s3uri is None or output_s3uri=="":
-        output_s3uri=default_output_s3uri
-    
+        output_s3uri=default_output_s3uri    
     for node_id in images:
         for image_data in images[node_id]:
             bucket, key = get_bucket_and_key(output_s3uri)
@@ -47,14 +56,12 @@ def write_imgage_to_s3(images,output_s3uri=""):
     write image to s3 bucket
     """
     s3_client = boto3.client('s3')
-    bucket = os.environ.get("s3_bucket", "")
+    s3_bucket = os.environ.get("s3_bucket", "")
     key = "/comfyui_output/images/"
     prediction = []
-
     default_output_s3uri = f's3://{s3_bucket}/comfyui_output/images/'
     if output_s3uri is None or output_s3uri=="":
-        output_s3uri=default_output_s3uri
-    
+        output_s3uri=default_output_s3uri    
     for node_id in images:
         for image_data in images[node_id]:
             image = Image.open(io.BytesIO(image_data))
@@ -76,6 +83,7 @@ def write_imgage_to_s3(images,output_s3uri=""):
     return prediction
 
 class InferenceOpt(BaseModel):
+    prompt_id:str = ""
     client_id:str = ""
     prompt: dict = None
     negative_prompt: str = ""
@@ -83,16 +91,16 @@ class InferenceOpt(BaseModel):
     inference_type: str = "txt2img"
     method:str = ""
 
-server_address = "localhost:8188"
+server_address = "127.0.0.1:8188"
 
 
 def queue_prompt(prompt,client_id):
-    print(prompt)
+    #print(prompt)
     p = {"prompt": prompt, "client_id": client_id}
     data = json.dumps(p).encode('utf-8')
+    #print(type(data))
     url = "http://"+server_address+"/prompt"
     req = urllib.request.Request(url, data=data)
-    #req =  urllib.request.Request("http://ec2-34-222-223-235.us-west-2.compute.amazonaws.com:8188/prompt", data=data)
     return json.loads(urllib.request.urlopen(req).read())
 
 def get_image_privew(filename):
@@ -107,26 +115,46 @@ def get_image(filename, subfolder, folder_type):
         return response.read()
 
 def get_history(prompt_id):
+    #print("here4=="+"http://{}/history/{}".format(server_address, prompt_id))
     with urllib.request.urlopen("http://{}/history/{}".format(server_address, prompt_id)) as response:
         return json.loads(response.read())
 
-def get_status(ws,prompt_id):
+def get_status_old(client_id,prompt_id):
     status="executing"
+    ws = websocket.WebSocket()
+    ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
     out = ws.recv()
     if isinstance(out, str):
         message = json.loads(out)
+        print("here3===")
+        print(message)
         if message['type'] == 'executing':
             data = message['data']
             if data['node'] is None and data['prompt_id'] == prompt_id:
-                status="done"
+                status = "success"
+    return status
+    ws.close()
+
+
+def get_status(prompt_id):
+    status="executing"
+    out = None
+    try:
+        with urllib.request.urlopen("http://{}/history/{}".format(server_address, prompt_id)) as response:
+             out=json.loads(response.read())
+             print("here3==")
+             print(out)
+        status= out[prompt_id]["status"]["status_str"]
+    except Exception as ex:
+        traceback.print_exc(file=sys.stdout)
+        print(f"=================Exception=================\n{ex}")
     return status
 
     
 def get_images(prompt_id):
+    output_images={}
     history = get_history(prompt_id)[prompt_id]
     for o in history['outputs']:
-        print("output==")
-        print(o)
         for node_id in history['outputs']:
             node_output = history['outputs'][node_id]
             if 'images' in node_output:
@@ -136,7 +164,7 @@ def get_images(prompt_id):
                     #image_data = get_image_privew(image['filename'])
                     print("image data==\n")
                     #image_text = (image_data).decode('utf-8') 
-                    print(image_data)
+                    #print(image_data)
                     images_output.append(image_data)
                 output_images[node_id] = images_output
             # video branch
@@ -159,28 +187,14 @@ def predict_fn(opt:InferenceOpt):
             prompt_id = queue_prompt(prompt,client_id)['prompt_id']
             return prompt_id
         if opt.method == "get_status":
-            ws = websocket.WebSocket()
-            ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
-            status = get_status(ws,prompt_id)
-            ws.close()
+            status = get_status(opt.client_id,opt.prompt_id)
             return status
         if opt.method == "get_images":
-            get_images(prompt_id)
+            output_images=get_images(opt.prompt_id)
             if opt.inference_type == "text2img":
-                ws = websocket.WebSocket()
-                ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
-                images = get_images(ws, prompt_id,client_id)
-                ws.close()
-                prediction=write_imgage_to_s3(images)
+                prediction=write_imgage_to_s3(output_images)
             elif opt.inference_type == "text2vid":
-                ws = websocket.WebSocket()
-                ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
-                start_dt=time.time()
-                images = get_images(ws, prompt_id,client_id)
-                end_dt=time.time()
-                ws.close()
-                print("time elapse:{:.6f} seconds".format(end_dt-start_dt))
-                prediction=write_gif_to_s3(images)
+                prediction=write_gif_to_s3(output_images)
     except Exception as ex:
         traceback.print_exc(file=sys.stdout)
         print(f"=================Exception=================\n{ex}")

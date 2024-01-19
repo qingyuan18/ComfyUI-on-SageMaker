@@ -4,6 +4,8 @@ FROM public.ecr.aws/o7x6j3x6/sd-dreambooth-finetuning-v2
 RUN pip install --no-cache-dir fastapi uvicorn sagemaker
 RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.0.0/s5cmd_2.0.0_Linux-64bit.tar.gz | tar -xz && mv s5cmd /opt/conda/bin/
 
+ENV PYTHONUNBUFFERED=TRUE
+ENV PYTHONDONTWRITEBYTECODE=TRUE
 ENV PATH="/opt/program:${PATH}"
 COPY code /opt/program
 
@@ -13,12 +15,14 @@ RUN pip install -r /opt/program/requirements.txt
 
 ####upgrade torch/torchversion/cuda121 relevant dependence
 RUN pip install torch torchvision --upgrade --index-url https://download.pytorch.org/whl/cu121
+RUN pip install -U xformers
 RUN pip install scikit-image
 RUN pip install imageio_ffmpeg
+RUN apt install net-tools
 
 ###download relevant models
 RUN wget https://huggingface.co/nergaldarski/CardosAnimeV2.0/resolve/main/cardosAnime_v20.safetensors
-RUN wget https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt/resolve/main/svd_xt.safetensors
+#RUN wget https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt/resolve/main/svd_xt.safetensors
 RUN wget https://huggingface.co/guoyww/animatediff/resolve/main/mm_sd_v15.ckpt
 RUN wget https://huggingface.co/mmmoof1/vae-ft-mse-840000-ema-pruned/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors
 RUN wget https://huggingface.co/latent-consistency/lcm-lora-sdv1-5/resolve/main/pytorch_lora_weights.safetensors
@@ -41,12 +45,11 @@ RUN git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git /opt/p
 
 ####install relevant http/socket client（for unicorn web server）
 RUN pip3 install websocket-client
-RUN pip3 install -U requests
+#RUN pip3 install -U requests
 RUN pip3 install pydantic
 
 #####start comfyui
 RUN chmod 755 /opt/program
+RUN chmod 755 /opt/program/serve
 WORKDIR /opt/program
-RUN chmod 755 serve
 
-ENTRYPOINT []
