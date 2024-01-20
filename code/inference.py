@@ -27,7 +27,7 @@ def write_gif_to_s3(images,output_s3uri=""):
     write image to s3 bucket
     """
     s3_client = boto3.client('s3')
-    s3_bucket = os.environ.get("s3_bucket", "sagemaker-us-west-2-687912291502")
+    s3_bucket = os.environ.get("s3_bucket", "")
     prediction = []
     default_output_s3uri = f's3://{s3_bucket}/comfyui_output/images/'
     if output_s3uri is None or output_s3uri=="":
@@ -91,7 +91,7 @@ class InferenceOpt(BaseModel):
     inference_type: str = "txt2img"
     method:str = ""
 
-server_address = "127.0.0.1:8188"
+server_address = "127.0.0.1:8088"
 
 
 def queue_prompt(prompt,client_id):
