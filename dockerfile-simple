@@ -1,8 +1,12 @@
-#FROM 763104351884.dkr.ecr.us-west-2.amazonaws.com/pytorch-inference:2.1.0-gpu-py310-cu118-ubuntu20.04-sagemaker
-FROM public.ecr.aws/o7x6j3x6/sd-dreambooth-finetuning-v2
+FROM nvcr.io/nvidia/pytorch:23.04-py3
+RUN mkdir -p /opt/program
+RUN chmod 777 /opt/program
+#FROM public.ecr.aws/o7x6j3x6/sd-dreambooth-finetuning-v2
+
 
 RUN pip install --no-cache-dir fastapi uvicorn sagemaker
-RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.0.0/s5cmd_2.0.0_Linux-64bit.tar.gz | tar -xz && mv s5cmd /opt/conda/bin/
+RUN pip install sagemaker-ssh-helper
+#RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.0.0/s5cmd_2.0.0_Linux-64bit.tar.gz | tar -xz && mv s5cmd /opt/conda/bin/
 
 ENV PYTHONUNBUFFERED=TRUE
 ENV PYTHONDONTWRITEBYTECODE=TRUE
@@ -13,11 +17,11 @@ COPY ComfyUI /opt/program
 RUN pip install -r /opt/program/requirements.txt
 
 ####upgrade torch/torchversion/cuda121 relevant dependence
-RUN pip install torch torchvision --upgrade --index-url https://download.pytorch.org/whl/cu121
+#RUN pip install torch torchvision --upgrade --index-url https://download.pytorch.org/whl/cu121
 RUN pip install -U xformers
 RUN pip install scikit-image
 RUN pip install imageio_ffmpeg
-RUN apt install net-tools
+#RUN apt install net-tools
 
 ###download relevant models
 RUN wget https://huggingface.co/nergaldarski/CardosAnimeV2.0/resolve/main/cardosAnime_v20.safetensors
@@ -49,3 +53,4 @@ RUN pip3 install pydantic
 RUN chmod 755 /opt/program
 RUN chmod 755 /opt/program/serve
 WORKDIR /opt/program
+

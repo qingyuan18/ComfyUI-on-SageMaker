@@ -1,10 +1,9 @@
 {
   "1": {
     "inputs": {
-      "ckpt_name": "cardosAnime_v20.safetensors",
-      "beta_schedule": "sqrt_linear (AnimateDiff)"
+      "ckpt_name": "cardosAnime_v20.safetensors"
     },
-    "class_type": "CheckpointLoaderSimpleWithNoiseSelect"
+    "class_type": "CheckpointLoaderSimple"
   },
   "3": {
     "inputs": {
