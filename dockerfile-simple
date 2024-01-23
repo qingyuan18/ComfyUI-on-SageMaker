@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/pytorch:23.04-py3
+FROM nvcr.io/nvidia/pytorch:23.05-py3
 RUN mkdir -p /opt/program
 RUN chmod 777 /opt/program
 #FROM public.ecr.aws/o7x6j3x6/sd-dreambooth-finetuning-v2
