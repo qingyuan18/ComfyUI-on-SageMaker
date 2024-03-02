@@ -1,7 +1,8 @@
-FROM 763104351884.dkr.ecr.us-west-2.amazonaws.com/pytorch-inference:2.1.0-gpu-py310-cu118-ubuntu20.04-sagemaker
+FROM nvcr.io/nvidia/pytorch:20.02-py3
+#FROM public.ecr.aws/o7x6j3x6/sd-dreambooth-finetuning-v2
 
 RUN pip install --no-cache-dir fastapi uvicorn sagemaker
-RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.0.0/s5cmd_2.0.0_Linux-64bit.tar.gz | tar -xz && mv s5cmd /opt/conda/bin/
+RUN curl -L https://github.com/peak/s5cmd/releases/download/v2.0.0/s5cmd_2.0.0_Linux-64bit.tar.gz | tar -xz && mv s5cmd /opt/program/
 
 ENV PATH="/opt/program:${PATH}"
 COPY code /opt/program
