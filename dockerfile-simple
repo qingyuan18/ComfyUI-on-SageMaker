@@ -24,6 +24,7 @@ RUN pip install imageio_ffmpeg
 #RUN apt install net-tools
 
 ###download relevant models
+RUN wget https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt/resolve/main/svd_xt.safetensors
 RUN wget https://huggingface.co/nergaldarski/CardosAnimeV2.0/resolve/main/cardosAnime_v20.safetensors
 RUN wget https://huggingface.co/guoyww/animatediff/resolve/main/mm_sd_v15.ckpt
 RUN wget https://huggingface.co/mmmoof1/vae-ft-mse-840000-ema-pruned/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors
