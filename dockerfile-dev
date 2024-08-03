@@ -24,18 +24,21 @@ RUN pip install imageio_ffmpeg
 #RUN apt install net-tools
 
 ###download relevant models
+RUN wget https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt/resolve/main/svd_xt.safetensors
 RUN wget https://huggingface.co/nergaldarski/CardosAnimeV2.0/resolve/main/cardosAnime_v20.safetensors
 RUN wget https://huggingface.co/guoyww/animatediff/resolve/main/mm_sd_v15.ckpt
 RUN wget https://huggingface.co/mmmoof1/vae-ft-mse-840000-ema-pruned/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors
+RUN wget https://huggingface.co/latent-consistency/lcm-lora-sdv1-5/resolve/main/pytorch_lora_weights.safetensors
 
+
+RUN mv ./pytorch_lora_weights.safetensors  /opt/program/models/loras/
 RUN mv ./vae*.safetensors /opt/program/models/vae/
 RUN mv ./*.safetensors /opt/program/models/checkpoints/
 
 
 ###install relevant ComfyUI nodes
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/program/custom_nodes/ComfyUI-Manager
-RUN git clone https://github.com/qingyuan18/comfyui-llm-node-for-amazon-bedrock
-RUN git clone https://github.com/qingyuan18/ComfyUI_LayerStyle
+
 RUN git clone https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved.git /opt/program/custom_nodes/ComfyUI-AnimateDiff-Evolved
 RUN mv ./mm_sd*.ckpt /opt/program/custom_nodes/ComfyUI-AnimateDiff-Evolved/models/
 
@@ -51,4 +54,3 @@ RUN pip3 install pydantic
 RUN chmod 755 /opt/program
 RUN chmod 755 /opt/program/serve
 WORKDIR /opt/program
-

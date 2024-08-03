@@ -25,7 +25,7 @@ docker login --username AWS -p ${pwd} ${account}.dkr.ecr.${region}.amazonaws.com
 # Build the docker image locally with the image name and then push it to ECR
 # with the full name.
 #git clone https://github.com/comfyanonymous/ComfyUI.git
-git clone https://github.com/qingyuan18/ComfyUI.git
+git clone -b dev https://github.com/qingyuan18/ComfyUI.git
 docker build -t ${algorithm_name}  ./ -f ./dockerfile-simple
 docker tag ${algorithm_name} ${fullname}
 docker push ${fullname}
