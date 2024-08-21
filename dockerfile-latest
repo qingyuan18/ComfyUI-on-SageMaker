@@ -32,7 +32,7 @@ RUN mv ./vae*.safetensors /opt/program/models/vae/
 
 
 ###install relevant ComfyUI nodes
-RUN git clone https://github.com/pythongosssss/ComfyUI-Custom-Scripts
+RUN git clone https://github.com/pythongosssss/ComfyUI-Custom-Scripts /opt/program/custom_nodes/ComfyUI-Custom-Scripts
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/program/custom_nodes/ComfyUI-Manager
 RUN git clone https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet.git /opt/program/custom_nodes/ComfyUI-Advanced-ControlNet
 RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git /opt/program/custom_nodes/comfyui_controlnet_aux
