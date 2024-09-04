@@ -27,7 +27,9 @@ RUN pip install retry
 
 ###download relevant models
 RUN wget https://huggingface.co/mmmoof1/vae-ft-mse-840000-ema-pruned/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors
+RUN wget https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/ae.safetensors
 RUN mv ./vae*.safetensors /opt/program/models/vae/
+RUN mv ./ae.safetensors /opt/program/models/vae/
 
 
 
