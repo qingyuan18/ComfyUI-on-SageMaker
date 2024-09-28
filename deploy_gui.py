@@ -2,6 +2,9 @@ import gradio as gr
 import json
 import boto3
 import jinja2
+from jinja2 import Template
+import os
+
 
 # 初始化全局变量
 models = {}
@@ -9,12 +12,45 @@ node_urls = []
 json_content = ""
 
 # 模型菜单选项
-model_types = ["基座模型", "lora模型", "controlnet模型", "clip vision模型", "clip模型", "Flux lora模型（xlab）", "Flux ipadapter模型（xlab)"]
+model_types = ["基座模型", "lora模型", "controlnet模型", "clip vision模型", "clip模型", "Flux lora模型（xlab）", "Flux ipadapter模型（xlab)","其他模型"]
+
+model_types_values = ["MODEL_PATH","LORA_MODEL_PATH","CONTROLNET_MODEL_PATH","CLIP_VIT_MODEL_PATH","CLIP_MODEL_PATH","FLUX_LORA_MODEL_PATH","FLUX_IPADAPTER_MODEL_PATH","OTHER_MODEL_PATHS"]
+
+
+# 清除模型
+def clear_models():
+    global models
+    models = {}
+    return gr.update(value="")
+
+# 清除 Nodes
+def clear_nodes():
+    global node_urls
+    node_urls = []
+    return gr.update(value="")
+
+def update_visibility(model_type):
+    if model_type == "其他模型":
+        return gr.update(visible=True), gr.update(visible=True), gr.update(visible=False)
+    else:
+        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True)
 
 # 添加模型
-def add_model(model_type, model_path):
+def add_model(model_type, model_path, comfy_dir=None, s3_path=None):
     global models
-    models[model_type] = model_path
+    index = model_types.index(model_type)
+    key = model_types_values[index]
+
+    if model_type == "其他模型":
+        if comfy_dir and s3_path:
+            new_value = f"{comfy_dir}|{s3_path}"
+            if key in models:
+                models[key] += f";{new_value}"
+            else:
+                models[key] = new_value
+    else:
+        models[key] = model_path
+
     return gr.update(value=f"当前模型配置：\n{json.dumps(models, indent=2, ensure_ascii=False)}")
 
 # 添加 customer nodes
@@ -26,25 +62,34 @@ def add_node(node_url):
 # 部署模型
 def deploy_model():
     global models, node_urls
-    # 这里应该使用 jinja2 模板来生成 Dockerfile
-    # 然后触发 build 和 SageMaker 部署操作
-    # 以下只是示例代码
-    template = jinja2.Template("""
-    FROM base_image
 
-    {% for model_type, model_path in models.items() %}
-    COPY {{ model_path }} /models/{{ model_type }}/
-    {% endfor %}
+    # 读取 Dockerfile 模板
+    with open('docker/Dockerfile.template', 'r') as file:
+        template_content = file.read()
 
-    {% for url in node_urls %}
-    RUN git clone {{ url }} /custom_nodes/
-    {% endfor %}
-    """)
+    # 创建 Jinja2 模板对象
+    template = Template(template_content)
 
-    dockerfile_content = template.render(models=models, node_urls=node_urls)
+    # 定义要克隆的 Git 仓库 URL 列表
+    git_urls = node_urls
 
-    # 这里应该有构建和部署的代码
-    print("Dockerfile content:", dockerfile_content)
+    # 生成 git clone 命令列表
+    git_clone_commands = []
+    for url in git_urls:
+        repo_name = os.path.splitext(os.path.basename(url))[0]
+        command = f"RUN git clone {url} /opt/program/custom_nodes/{repo_name}"
+        git_clone_commands.append(command)
+
+    # 渲染模板
+    rendered_content = template.render(git_clone_commands=git_clone_commands)
+
+    # 将渲染后的内容写入新的 Dockerfile
+    with open('Dockerfile_deploy', 'w') as file:
+        file.write(rendered_content)
+
+    print("New Dockerfile has been generated.")
+
+    # 构建和部署sagemaker
     return "模型部署已启动"
 
 # 解析上传的 JSON 文件
@@ -75,14 +120,19 @@ with gr.Blocks() as demo:
         with gr.Column():
             model_type = gr.Dropdown(choices=model_types, label="模型类型")
             model_path = gr.Textbox(label="模型路径", value="s3://your_bucket/your_sd_model_path")
-            add_model_btn = gr.Button("添加模型")
+            comfy_dir = gr.Textbox(label="ComfyUI 模型目录", visible=False)
+            s3_path = gr.Textbox(label="S3 模型路径", visible=False)
             model_info = gr.Textbox(label="模型信息", interactive=False)
+            add_model_btn = gr.Button("添加模型")
+            clear_models_btn = gr.Button("清除模型")
 
             node_url = gr.Textbox(label="Node Git URL", value="https://github.com/example/custom_node.git")
-            add_node_btn = gr.Button("添加 Customer Nodes")
             node_info = gr.Textbox(label="Node URL 信息", interactive=False)
+            add_node_btn = gr.Button("添加 Customer Nodes")
+            clear_nodes_btn = gr.Button("清除 Nodes")
 
-            deploy_btn = gr.Button("部署")
+
+            deploy_btn = gr.Button("部署（默认g5.2xlarge），us-west-2区域部署")
             deploy_info = gr.Textbox(label="部署信息", interactive=False)
 
         with gr.Column():
@@ -93,9 +143,16 @@ with gr.Blocks() as demo:
             run_btn = gr.Button("运行")
             image_output = gr.Image(label="生成的图像")
 
-    add_model_btn.click(add_model, inputs=[model_type, model_path], outputs=model_info)
     add_node_btn.click(add_node, inputs=node_url, outputs=node_info)
     deploy_btn.click(deploy_model, outputs=deploy_info)
+    model_type.change(update_visibility, inputs=[model_type], outputs=[comfy_dir, s3_path, model_path])
+    add_model_btn.click(
+        add_model,
+        inputs=[model_type, model_path, comfy_dir, s3_path],
+        outputs=model_info
+    )
+    clear_models_btn.click(clear_models, outputs=model_info)
+    clear_nodes_btn.click(clear_nodes, outputs=node_info)
 
     edit_btn.click(parse_json, inputs=json_file, outputs=json_text)
     save_btn.click(save_json, inputs=json_text, outputs=json_text)
