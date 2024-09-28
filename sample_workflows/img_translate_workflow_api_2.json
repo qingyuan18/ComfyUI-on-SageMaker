@@ -1,0 +1,171 @@
+{
+  "20": {
+    "inputs": {
+      "prompt": [
+        "21",
+        0
+      ],
+      "model_id": "anthropic.claude-3-sonnet-20240229-v1:0",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "top_p": 1,
+      "top_k": 71
+    },
+    "class_type": "Bedrock - Claude",
+    "_meta": {
+      "title": "Bedrock - Claude"
+    }
+  },
+  "21": {
+    "inputs": {
+      "prompt": [
+        "58",
+        0
+      ],
+      "prompt_template": "把如下内容翻译为中文\n[prompt]\n如果原文中有\"|\"分隔符，注意保持翻译后的\"|\"分隔符号与原文中一致\n直接返回翻译后的文本"
+    },
+    "class_type": "Prompt Template",
+    "_meta": {
+      "title": "Prompt Template"
+    }
+  },
+  "45": {
+    "inputs": {
+      "texts": [
+        "20",
+        0
+      ],
+      "font_file": "Alibaba-PuHuiTi-Heavy.ttf",
+      "align": "center",
+      "char_per_line": 30,
+      "leading": 6,
+      "font_size": 400,
+      "text_color": "#FFFFFF",
+      "stroke_width": 0,
+      "stroke_color": "#FF8000",
+      "x_offsets": [
+        "58",
+        1
+      ],
+      "y_offsets": [
+        "58",
+        2
+      ],
+      "widths": [
+        "58",
+        3
+      ],
+      "heights": [
+        "58",
+        4
+      ],
+      "img_width": [
+        "58",
+        5
+      ],
+      "img_height": [
+        "58",
+        6
+      ]
+    },
+    "class_type": "LayerUtility: SimpleTextImage",
+    "_meta": {
+      "title": "LayerUtility: SimpleTextImage"
+    }
+  },
+  "57": {
+    "inputs": {
+      "lama_model": "lama",
+      "device": "cuda",
+      "invert_mask": false,
+      "mask_grow": 1,
+      "mask_blur": 2,
+      "image": [
+        "58",
+        8
+      ],
+      "mask": [
+        "72",
+        0
+      ]
+    },
+    "class_type": "LayerUtility: LaMa",
+    "_meta": {
+      "title": "LayerUtility: LaMa"
+    }
+  },
+  "58": {
+    "inputs": {
+      "image": [
+        "74",
+        0
+      ]
+    },
+    "class_type": "Image OCR By Textract V3",
+    "_meta": {
+      "title": "Image OCR By Textract V3"
+    }
+  },
+  "72": {
+    "inputs": {
+      "color": 0,
+      "image": [
+        "58",
+        7
+      ]
+    },
+    "class_type": "ImageColorToMask",
+    "_meta": {
+      "title": "ImageColorToMask"
+    }
+  },
+  "73": {
+    "inputs": {
+      "invert_mask": false,
+      "blend_mode": "normal",
+      "opacity": 100,
+      "start_color": "#FFFFFF",
+      "start_alpha": 255,
+      "end_color": "#FFFFFF",
+      "end_alpha": 255,
+      "angle": 0,
+      "background_image": [
+        "57",
+        0
+      ],
+      "layer_image": [
+        "45",
+        0
+      ],
+      "layer_mask": [
+        "45",
+        1
+      ]
+    },
+    "class_type": "LayerStyle: GradientOverlay V2",
+    "_meta": {
+      "title": "LayerStyle: GradientOverlay V2"
+    }
+  },
+  "74": {
+    "inputs": {
+      "image": ""
+    },
+    "class_type": "ETN_LoadImageBase64",
+    "_meta": {
+      "title": "Load Image (Base64)"
+    }
+  },
+  "76": {
+    "inputs": {
+      "images": [
+        "73",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  }
+}
