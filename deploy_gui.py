@@ -16,6 +16,8 @@ model_types = ["基座模型", "lora模型", "controlnet模型", "clip vision模
 
 model_types_values = ["MODEL_PATH","LORA_MODEL_PATH","CONTROLNET_MODEL_PATH","CLIP_VIT_MODEL_PATH","CLIP_MODEL_PATH","FLUX_LORA_MODEL_PATH","FLUX_IPADAPTER_MODEL_PATH","OTHER_MODEL_PATHS"]
 
+# 机型选项
+instance_types = ["ml.g5.2xlarge", "ml.g5.4xlarge"]
 
 # 清除模型
 def clear_models():
@@ -62,27 +64,21 @@ def add_node(node_url):
 # 部署模型
 def deploy_model():
     global models, node_urls
-
     # 读取 Dockerfile 模板
     with open('docker/Dockerfile.template', 'r') as file:
         template_content = file.read()
-
     # 创建 Jinja2 模板对象
     template = Template(template_content)
-
     # 定义要克隆的 Git 仓库 URL 列表
     git_urls = node_urls
-
     # 生成 git clone 命令列表
     git_clone_commands = []
     for url in git_urls:
         repo_name = os.path.splitext(os.path.basename(url))[0]
         command = f"RUN git clone {url} /opt/program/custom_nodes/{repo_name}"
         git_clone_commands.append(command)
-
     # 渲染模板
     rendered_content = template.render(git_clone_commands=git_clone_commands)
-
     # 将渲染后的内容写入新的 Dockerfile
     with open('Dockerfile_deploy', 'w') as file:
         file.write(rendered_content)
@@ -90,7 +86,43 @@ def deploy_model():
     print("New Dockerfile has been generated.")
 
     # 构建和部署sagemaker
-    return "模型部署已启动"
+    ## 初始化部署信息
+    deploy_info = f"开始部署模型\n实例类型: {instance_type}\n区域: {region}\n"
+    yield deploy_info
+
+    #实际的部署逻辑
+    endpoint_name = f"comfyui-endpoint-{int(time.time())}"
+    try:
+        # 创建 SageMaker endpoint
+        # create_sagemaker_endpoint(endpoint_name, instance_type, region, models, node_urls)
+        deploy_info += f"正在创建 SageMaker endpoint: {endpoint_name}\n"
+        yield deploy_info
+
+        # 模拟部署过程
+        for i in range(5):
+            time.sleep(2)  # 等待2秒
+            deploy_info += f"部署进度: {(i+1)*20}%\n"
+            yield deploy_info
+
+        # 使用 AWS CLI 查询部署日志
+        cmd = f"aws sagemaker describe-endpoint --endpoint-name {endpoint_name} --region {region}"
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
+        output, error = process.communicate()
+
+        if process.returncode == 0:
+            endpoint_info = json.loads(output)
+            status = endpoint_info['EndpointStatus']
+            deploy_info += f"Endpoint 状态: {status}\n"
+            deploy_info += f"部署日志:\n{json.dumps(endpoint_info, indent=2)}\n"
+        else:
+            deploy_info += f"获取部署日志失败: {error}\n"
+
+    except Exception as e:
+        deploy_info += f"部署过程中出现错误: {str(e)}\n"
+
+    deploy_info += "部署完成\n"
+    yield deploy_info
+
 
 # 解析上传的 JSON 文件
 def parse_json(file):
@@ -132,7 +164,9 @@ with gr.Blocks() as demo:
             clear_nodes_btn = gr.Button("清除 Nodes")
 
 
-            deploy_btn = gr.Button("部署（默认g5.2xlarge），us-west-2区域部署")
+            instance_type = gr.Dropdown(choices=instance_types, label="机型", value="ml.g5.2xlarge")
+            region = gr.Textbox(label="区域", value="us-west-2")
+            deploy_btn = gr.Button("部署")
             deploy_info = gr.Textbox(label="部署信息", interactive=False)
 
         with gr.Column():
@@ -144,7 +178,7 @@ with gr.Blocks() as demo:
             image_output = gr.Image(label="生成的图像")
 
     add_node_btn.click(add_node, inputs=node_url, outputs=node_info)
-    deploy_btn.click(deploy_model, outputs=deploy_info)
+    deploy_btn.click(deploy_model, inputs=[instance_type, region], outputs=deploy_info)
     model_type.change(update_visibility, inputs=[model_type], outputs=[comfy_dir, s3_path, model_path])
     add_model_btn.click(
         add_model,

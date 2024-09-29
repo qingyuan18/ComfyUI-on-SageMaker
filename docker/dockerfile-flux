@@ -23,6 +23,8 @@ RUN pip install scikit-image
 RUN pip install imageio_ffmpeg
 RUN pip install wget
 RUN pip install retry
+RUN pip install segment-anything
+
 #RUN apt install net-tools
 
 ###download relevant models
