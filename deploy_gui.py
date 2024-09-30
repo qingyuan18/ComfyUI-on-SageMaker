@@ -4,7 +4,8 @@ import boto3
 import jinja2
 from jinja2 import Template
 import os
-
+import time
+import subprocess
 
 # 初始化全局变量
 models = {}
@@ -13,7 +14,6 @@ json_content = ""
 
 # 模型菜单选项
 model_types = ["基座模型", "lora模型", "controlnet模型", "clip vision模型", "clip模型", "Flux lora模型（xlab）", "Flux ipadapter模型（xlab)","其他模型"]
-
 model_types_values = ["MODEL_PATH","LORA_MODEL_PATH","CONTROLNET_MODEL_PATH","CLIP_VIT_MODEL_PATH","CLIP_MODEL_PATH","FLUX_LORA_MODEL_PATH","FLUX_IPADAPTER_MODEL_PATH","OTHER_MODEL_PATHS"]
 
 # 机型选项
@@ -62,7 +62,7 @@ def add_node(node_url):
     return gr.update(value=f"当前 Node URLs：\n{json.dumps(node_urls, indent=2, ensure_ascii=False)}")
 
 # 部署模型
-def deploy_model():
+def deploy_model(instance_type, region):
     global models, node_urls
     # 读取 Dockerfile 模板
     with open('docker/Dockerfile.template', 'r') as file:
@@ -123,7 +123,6 @@ def deploy_model():
     deploy_info += "部署完成\n"
     yield deploy_info
 
-
 # 解析上传的 JSON 文件
 def parse_json(file):
     if file is not None:
@@ -138,13 +137,24 @@ def save_json(content):
     return content
 
 # 运行推理
-def run_inference():
-    global json_content
+def run_inference(endpoint_name, json_content):
     # 这里应该调用 SageMaker endpoint
     # 以下只是示例代码
-    print("Running inference with:", json_content)
+    print(f"Running inference on endpoint {endpoint_name} with:", json_content)
     # 假设返回了一个图像 URL
     return "https://example.com/generated_image.jpg"
+
+# 获取 SageMaker endpoints
+def get_sagemaker_endpoints(region):
+    sagemaker = boto3.client('sagemaker', region_name=region)
+    response = sagemaker.list_endpoints()
+    endpoints = [endpoint['EndpointName'] for endpoint in response['Endpoints']]
+    return endpoints
+
+# 刷新 endpoints 列表
+def refresh_endpoints(region):
+    endpoints = get_sagemaker_endpoints(region)
+    return gr.update(choices=endpoints)
 
 # 创建 Gradio 界面
 with gr.Blocks() as demo:
@@ -163,16 +173,16 @@ with gr.Blocks() as demo:
             add_node_btn = gr.Button("添加 Customer Nodes")
             clear_nodes_btn = gr.Button("清除 Nodes")
 
-
             instance_type = gr.Dropdown(choices=instance_types, label="机型", value="ml.g5.2xlarge")
             region = gr.Textbox(label="区域", value="us-west-2")
             deploy_btn = gr.Button("部署")
             deploy_info = gr.Textbox(label="部署信息", interactive=False)
 
         with gr.Column():
+            endpoint_dropdown = gr.Dropdown(label="推理端点", choices=get_sagemaker_endpoints(region.value))
+            refresh_btn = gr.Button("刷新")
             json_file = gr.File(label="上传 JSON 文件")
             json_text = gr.Textbox(label="JSON 内容", lines=10)
-            edit_btn = gr.Button("编辑")
             save_btn = gr.Button("保存")
             run_btn = gr.Button("运行")
             image_output = gr.Image(label="生成的图像")
@@ -188,8 +198,8 @@ with gr.Blocks() as demo:
     clear_models_btn.click(clear_models, outputs=model_info)
     clear_nodes_btn.click(clear_nodes, outputs=node_info)
 
-    edit_btn.click(parse_json, inputs=json_file, outputs=json_text)
+    refresh_btn.click(refresh_endpoints, inputs=[region], outputs=[endpoint_dropdown])
     save_btn.click(save_json, inputs=json_text, outputs=json_text)
-    run_btn.click(run_inference, outputs=image_output)
+    run_btn.click(run_inference, inputs=[endpoint_dropdown, json_text], outputs=image_output)
 
 demo.launch()
