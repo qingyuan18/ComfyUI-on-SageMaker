@@ -6,11 +6,36 @@ from jinja2 import Template
 import os
 import time
 import subprocess
+import uuid
+import json
+import base64
+import datetime
+import io
+import traceback
+from PIL import Image
+import json
+import matplotlib.pyplot as plt
+from sagemaker_ssh_helper.wrapper import SSHModelWrapper
+from sagemaker import get_execution_role,session
+from sagemaker import Model, image_uris, serializers, deserializers
+import sagemaker
+
+# 初始化sagemaker
+role = get_execution_role()
+sage_session = session.Session()
+bucket = sage_session.default_bucket()
+aws_region = boto3.Session().region_name
+sts_client = boto3.client('sts')
+account_id = sts_client.get_caller_identity()['Account']
+print(f'account id:{account_id}')
+print(f'sagemaker sdk version: {sagemaker.__version__}\nrole:  {role}  \nbucket:  {bucket}')
+
 
 # 初始化全局变量
 models = {}
 node_urls = []
 json_content = ""
+temp_file_path = None
 
 # 模型菜单选项
 model_types = ["基座模型", "lora模型", "controlnet模型", "clip vision模型", "clip模型", "Flux lora模型（xlab）", "Flux ipadapter模型（xlab)","其他模型"]
@@ -18,6 +43,122 @@ model_types_values = ["MODEL_PATH","LORA_MODEL_PATH","CONTROLNET_MODEL_PATH","CL
 
 # 机型选项
 instance_types = ["ml.g5.2xlarge", "ml.g5.4xlarge"]
+
+
+##### sagemaker utility functions ######
+s3_client = boto3.client('s3')
+def show_local_image(image_path):
+    try:
+        # 使用PIL库打开图像
+        img = Image.open(image_path)
+        # 使用matplotlib显示图像
+        plt.figure(figsize=(10, 8))
+        plt.imshow(img)
+        plt.axis('off')  # 不显示坐标轴
+        plt.title('Local Image')
+        plt.show()
+    except FileNotFoundError:
+        print(f"Error: The file '{image_path}' was not found.")
+    except IOError:
+        print(f"Error: Unable to open the image file '{image_path}'.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+def get_bucket_and_key(s3uri):
+    pos = s3uri.find('/', 5)
+    bucket = s3uri[5 : pos]
+    key = s3uri[pos + 1 : ]
+    return bucket, key
+
+
+def predict(endpoint_name,payload):
+    runtime_client = boto3.client('runtime.sagemaker')
+    response = runtime_client.invoke_endpoint(
+        EndpointName=endpoint_name,
+        ContentType='application/json',
+        Body=json.dumps(payload)
+    )
+    print(response)
+    result = json.loads(response['Body'].read().decode())
+    print(result)
+    return result
+
+
+def show_image(result):
+    try:
+        for image in result['prediction']:
+            bucket, key = get_bucket_and_key(image)
+            obj = s3_client.get_object(Bucket=bucket, Key=key)
+            bytes = obj['Body'].read()
+            image = Image.open(io.BytesIO(bytes))
+            #resize image to 50% size
+            half = 0.5
+            out_image = image.resize([int(half * s) for s in image.size])
+            out_image.show()
+
+    except Exception as e:
+        print("result is not completed, waiting...")
+
+
+def show_gifs(result):
+    import base64
+    from IPython import display
+    try:
+        predictions = result['prediction']
+        s3_file_path = predictions[0]
+        print("s3 generated gifs path is {}".format(s3_file_path))
+        bucket_name, key = get_bucket_and_key(s3_file_path)
+        timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        local_file_path="./ComfyUI_"+timestamp+".gif"
+        s3_client.download_file(bucket_name, key, local_file_path)
+        with open(local_file_path, 'rb') as fd:
+            b64 = base64.b64encode(fd.read()).decode('ascii')
+        return display.HTML(f'<img src="data:image/gif;base64,{b64}" />')
+    except Exception as e:
+        print(e)
+        print("result is not completed, waiting...")
+
+
+def check_sendpoint_status(endpoint_name,timeout=600):
+    client = boto3.client('sagemaker')
+    current_time=0
+    while current_time<timeout:
+        client = boto3.client('sagemaker')
+        try:
+            response = client.describe_endpoint(
+            EndpointName=endpoint_name
+            )
+            if response['EndpointStatus'] !='InService':
+                raise Exception (f'{endpoint_name} not ready , please wait....')
+        except Exception as ex:
+            print(f'{endpoint_name} not ready , please wait....')
+            time.sleep(10)
+        else:
+            status = response['EndpointStatus']
+            print(f'{endpoint_name} is ready, status: {status}')
+            break
+
+
+##### func for gui #############
+# 解析上传的 JSON 文件
+def parse_json(file):
+    if file is not None:
+        file_path = file.name
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return content
+    return ""
+
+# 保存 JSON 内容
+def save_json(content):
+    global temp_file_path
+    # 创建一个临时文件
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8') as temp_file:
+        temp_file.write(content)
+        temp_file_path = temp_file.name
+
+    return gr.Info("JSON 内容已保存")
 
 # 清除模型
 def clear_models():
@@ -83,18 +224,55 @@ def deploy_model(instance_type, region):
     with open('Dockerfile_deploy', 'w') as file:
         file.write(rendered_content)
 
-    print("New Dockerfile has been generated.")
+    gr.info("New Dockerfile has been generated.")
 
-    # 构建和部署sagemaker
-    ## 初始化部署信息
+    ## step1: build docker image
+    deploy_info = f"开始build镜像（初次build会下载base image，有一定的时间，请耐心等待"
+    yield deploy_info
+    # AWS ECR login
+    subprocess.run("aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 763104351884.dkr.ecr.us-west-2.amazonaws.com", shell=True, check=True)
+    # Build and push
+    subprocess.run("./build_and_push.sh", shell=True, check=True)
+    # Create dummy file and tar
+    with open('dummy', 'w') as f:
+        pass
+    subprocess.run(["tar", "czvf", "model.tar.gz", "dummy"], check=True)
+    # Set S3 paths
+    bucket = 'your-bucket-name'  # 请替换为实际的桶名
+    assets_dir = f's3://{bucket}/stablediffusion/assets/'
+    model_data = f's3://{bucket}/stablediffusion/assets/model.tar.gz'
+    # Upload to S3
+    subprocess.run(["aws", "s3", "cp", "model.tar.gz", assets_dir], check=True)
+    # Clean up
+    os.remove('dummy')
+    os.remove('model.tar.gz')
+
+    ## step2: create sagemaker model config
+    env = models
+    container=f"{account_id}.dkr.ecr.{aws_region}.amazonaws.com/comfyui-inference:latest"
+
+    model = Model(image_uri=container,
+              model_data=model_data,
+              role=role,
+              env=env,
+              dependencies=[SSHModelWrapper.dependency_dir()] )
+
+
+
     deploy_info = f"开始部署模型\n实例类型: {instance_type}\n区域: {region}\n"
     yield deploy_info
 
-    #实际的部署逻辑
+    ## step3: start deployment
     endpoint_name = f"comfyui-endpoint-{int(time.time())}"
     try:
         # 创建 SageMaker endpoint
-        # create_sagemaker_endpoint(endpoint_name, instance_type, region, models, node_urls)
+        endpoint_name = sagemaker.utils.name_from_base("comfyui-byoc")
+        ssh_wrapper = SSHModelWrapper.create(model, connection_wait_time_seconds=0)
+        model.deploy(initial_instance_count=1,
+             instance_type=instance_type,
+             endpoint_name=endpoint_name,
+             container_startup_health_check_timeout=800
+            )
         deploy_info += f"正在创建 SageMaker endpoint: {endpoint_name}\n"
         yield deploy_info
 
@@ -125,35 +303,98 @@ def deploy_model(instance_type, region):
 
 # 解析上传的 JSON 文件
 def parse_json(file):
-    if file is not None:
-        content = file.decode("utf-8")
-        return content
-    return ""
+    with open(str(file), 'r', encoding='utf-8') as f:
+        content = f.read()
+    # 继续处理 content...
+    return json.loads(content)
 
-# 保存 JSON 内容
-def save_json(content):
-    global json_content
-    json_content = content
-    return content
+
 
 # 运行推理
-def run_inference(endpoint_name, json_content):
-    # 这里应该调用 SageMaker endpoint
-    # 以下只是示例代码
-    print(f"Running inference on endpoint {endpoint_name} with:", json_content)
-    # 假设返回了一个图像 URL
-    return "https://example.com/generated_image.jpg"
+def run_inference(endpoint_name):
+    global temp_file_path
+    if temp_file_path is None:
+        return gr.Error("请先保存 JSON 内容")
+
+    # step1:提交prompt请求
+    prompt_json_file=temp_file_path
+    prompt_text=""
+    with open(prompt_json_file) as f:
+        prompt_text = json.load(f)
+    client_id = str(uuid.uuid4())
+    payload={
+         "client_id":client_id,
+         "prompt": prompt_text,
+         "inference_type":"text2img",
+         "method":"queue_prompt"
+    }
+    prompt_id = predict(endpoint_name,payload)["prompt_id"]
+    gr.Info("任务已提交:"+prompt_id)
+
+    # step2: 查询状态
+    payload={
+     "client_id":client_id,
+     "prompt_id":prompt_id,
+     "inference_type":"text2img",
+     "method":"get_status"
+    }
+    while True:
+        status = predict(endpoint_name,payload)
+        gr.Info("任务状态:"+status)
+        time.sleep(10)
+        if status["status"] == "success":
+            break
+
+    # step3:获取结果
+    payload={
+     "client_id":client_id,
+     "prompt_id":prompt_id,
+     "inference_type":"text2img",
+     "method":"get_images"
+    }
+    result = predict(endpoint_name,payload)
+    gr.Info("结果文件:"+result['prediction'])
+
+    # step4: 下载并处理 S3 图片
+    s3_client = boto3.client('s3')
+    image_list = []
+    for s3_url in result['prediction']:
+        # 解析 S3 URL
+        bucket_name = s3_url.split('/')[2]
+        object_key = '/'.join(s3_url.split('/')[3:])
+        # 下载图片
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
+            s3_client.download_fileobj(bucket_name, object_key, temp_file)
+            temp_file_path = temp_file.name
+        # 打开图片并添加到列表
+        image = Image.open(temp_file_path)
+        image_list.append(image)
+        # 删除临时文件
+        os.unlink(temp_file_path)
+    return image_list
+
 
 # 获取 SageMaker endpoints
-def get_sagemaker_endpoints(region):
+def get_inservice_sagemaker_endpoints(region):
     sagemaker = boto3.client('sagemaker', region_name=region)
-    response = sagemaker.list_endpoints()
-    endpoints = [endpoint['EndpointName'] for endpoint in response['Endpoints']]
-    return endpoints
+    inservice_endpoints = []
+    next_token = None
+    while True:
+        if next_token:
+            response = sagemaker.list_endpoints(NextToken=next_token, StatusEquals='InService')
+        else:
+            response = sagemaker.list_endpoints(StatusEquals='InService')
+        inservice_endpoints.extend([endpoint['EndpointName'] for endpoint in response['Endpoints']])
+        if 'NextToken' in response:
+            next_token = response['NextToken']
+        else:
+            break
+    return inservice_endpoints
+
 
 # 刷新 endpoints 列表
 def refresh_endpoints(region):
-    endpoints = get_sagemaker_endpoints(region)
+    endpoints = get_inservice_sagemaker_endpoints(region)
     return gr.update(choices=endpoints)
 
 # 创建 Gradio 界面
@@ -179,13 +420,13 @@ with gr.Blocks() as demo:
             deploy_info = gr.Textbox(label="部署信息", interactive=False)
 
         with gr.Column():
-            endpoint_dropdown = gr.Dropdown(label="推理端点", choices=get_sagemaker_endpoints(region.value))
+            endpoint_dropdown = gr.Dropdown(label="推理端点", choices=get_inservice_sagemaker_endpoints(region.value))
             refresh_btn = gr.Button("刷新")
             json_file = gr.File(label="上传 JSON 文件")
             json_text = gr.Textbox(label="JSON 内容", lines=10)
             save_btn = gr.Button("保存")
             run_btn = gr.Button("运行")
-            image_output = gr.Image(label="生成的图像")
+            image_output = gr.Gallery(label="生成的图像")
 
     add_node_btn.click(add_node, inputs=node_url, outputs=node_info)
     deploy_btn.click(deploy_model, inputs=[instance_type, region], outputs=deploy_info)
@@ -199,7 +440,8 @@ with gr.Blocks() as demo:
     clear_nodes_btn.click(clear_nodes, outputs=node_info)
 
     refresh_btn.click(refresh_endpoints, inputs=[region], outputs=[endpoint_dropdown])
-    save_btn.click(save_json, inputs=json_text, outputs=json_text)
-    run_btn.click(run_inference, inputs=[endpoint_dropdown, json_text], outputs=image_output)
+    json_file.upload(parse_json, inputs=[json_file], outputs=[json_text])
+    save_btn.click(save_json, inputs=[json_text])
+    run_btn.click(run_inference, inputs=[endpoint_dropdown], outputs=[image_output])
 
 demo.launch()
