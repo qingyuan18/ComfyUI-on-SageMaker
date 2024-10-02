@@ -303,22 +303,24 @@ def deploy_model(instance_type, region):
         model.deploy(initial_instance_count=1,
              instance_type=instance_type,
              endpoint_name=endpoint_name,
-             container_startup_health_check_timeout=800
+             container_startup_health_check_timeout=2600
             )
         print("here1====")
+        deploy_info += f"{endpoint_name}部署成功!\n"
+        yield deploy_info
         # 使用 AWS CLI 查询部署日志
-        cmd = f"aws sagemaker describe-endpoint --endpoint-name {endpoint_name} --region {region}"
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
-        output, error = process.communicate()
-        print("here2===")
+        #cmd = f"aws sagemaker describe-endpoint --endpoint-name {endpoint_name} --region {aws_region}"
+        #process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
+        #output, error = process.communicate()
+        #print("here2===")
 
-        if process.returncode == 0:
-            endpoint_info = json.loads(output)
-            status = endpoint_info['EndpointStatus']
-            deploy_info += f"Endpoint 状态: {status}\n"
-            deploy_info += f"部署日志:\n{json.dumps(endpoint_info, indent=2)}\n"
-        else:
-            deploy_info += f"获取部署日志失败: {error}\n"
+        #if process.returncode == 0:
+        #    endpoint_info = json.loads(output)
+        #    status = endpoint_info['EndpointStatus']
+        #    deploy_info += f"Endpoint 状态: {status}\n"
+        #    deploy_info += f"部署日志:\n{json.dumps(endpoint_info, indent=2)}\n"
+        #else:
+        #    deploy_info += f"获取部署日志失败: {error}\n"
 
     except Exception as e:
         deploy_info += f"部署过程中出现错误: {str(e)}\n"
