@@ -262,7 +262,7 @@ def deploy_model(instance_type, region):
     # AWS ECR login
     subprocess.run("aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 763104351884.dkr.ecr.us-west-2.amazonaws.com", shell=True, check=True)
     # Build and push
-    subprocess.run("./build_and_push.sh docker/Dockerfile_deploy", shell=True, check=True)
+    subprocess.run("./build_and_push.sh ./docker/Dockerfile_deploy", shell=True, check=True)
     # Create dummy file and tar
     with open('dummy', 'w') as f:
         pass
@@ -293,6 +293,7 @@ def deploy_model(instance_type, region):
 
     ## step3: start deployment
     endpoint_name = f"comfyui-endpoint-{int(time.time())}"
+    print("here0====")
     try:
         # 创建 SageMaker endpoint
         endpoint_name = sagemaker.utils.name_from_base("comfyui-byoc")
@@ -304,10 +305,12 @@ def deploy_model(instance_type, region):
              endpoint_name=endpoint_name,
              container_startup_health_check_timeout=800
             )
+        print("here1====")
         # 使用 AWS CLI 查询部署日志
         cmd = f"aws sagemaker describe-endpoint --endpoint-name {endpoint_name} --region {region}"
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
         output, error = process.communicate()
+        print("here2===")
 
         if process.returncode == 0:
             endpoint_info = json.loads(output)
