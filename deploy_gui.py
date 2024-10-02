@@ -142,23 +142,52 @@ def check_sendpoint_status(endpoint_name,timeout=600):
 
 ##### func for gui #############
 # 解析上传的 JSON 文件
+#def parse_json(file):
+#    if file is not None:
+#        file_path = file.name
+#        with open(file_path, 'r', encoding='utf-8') as f:
+#            content = f.read()
+#        return content
+#    return ""
+
 def parse_json(file):
     if file is not None:
         file_path = file.name
         with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        return content
+            content = json.load(f)
+        formatted_content = json.dumps(content, indent=2, ensure_ascii=False)
+        return formatted_content
     return ""
 
+
+
 # 保存 JSON 内容
+#def save_json(content):
+#    global temp_file_path
+#    # 创建一个临时文件
+#    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8') as temp_file:
+#        temp_file.write(content)
+#        temp_file_path = temp_file.name
+#
+#    return gr.Info("JSON 内容已保存")
+
 def save_json(content):
     global temp_file_path
-    # 创建一个临时文件
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8') as temp_file:
-        temp_file.write(content)
-        temp_file_path = temp_file.name
+    try:
+        # 解析JSON字符串
+        parsed_json = json.loads(content)
+        # 创建一个临时文件
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8') as temp_file:
+            # 写入格式化的JSON
+            json.dump(parsed_json, temp_file, indent=2, ensure_ascii=False)
+            temp_file_path = temp_file.name
+        gr.Info("JSON 内容已保存")
+        return content
+    except json.JSONDecodeError:
+        gr.Error("无效的 JSON 格式")
+        return
 
-    return gr.Info("JSON 内容已保存")
+
 
 # 清除模型
 def clear_models():
@@ -206,7 +235,7 @@ def add_node(node_url):
 def deploy_model(instance_type, region):
     global models, node_urls
     # 读取 Dockerfile 模板
-    with open('docker/Dockerfile.template', 'r') as file:
+    with open('docker/dockerfile.template', 'r') as file:
         template_content = file.read()
     # 创建 Jinja2 模板对象
     template = Template(template_content)
@@ -221,7 +250,7 @@ def deploy_model(instance_type, region):
     # 渲染模板
     rendered_content = template.render(git_clone_commands=git_clone_commands)
     # 将渲染后的内容写入新的 Dockerfile
-    with open('Dockerfile_deploy', 'w') as file:
+    with open('docker/Dockerfile_deploy', 'w') as file:
         file.write(rendered_content)
 
     gr.info("New Dockerfile has been generated.")
@@ -232,13 +261,12 @@ def deploy_model(instance_type, region):
     # AWS ECR login
     subprocess.run("aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 763104351884.dkr.ecr.us-west-2.amazonaws.com", shell=True, check=True)
     # Build and push
-    subprocess.run("./build_and_push.sh", shell=True, check=True)
+    subprocess.run("./build_and_push.sh docker/Dockerfile_deploy", shell=True, check=True)
     # Create dummy file and tar
     with open('dummy', 'w') as f:
         pass
     subprocess.run(["tar", "czvf", "model.tar.gz", "dummy"], check=True)
     # Set S3 paths
-    bucket = 'your-bucket-name'  # 请替换为实际的桶名
     assets_dir = f's3://{bucket}/stablediffusion/assets/'
     model_data = f's3://{bucket}/stablediffusion/assets/model.tar.gz'
     # Upload to S3
@@ -300,13 +328,6 @@ def deploy_model(instance_type, region):
 
     deploy_info += "部署完成\n"
     yield deploy_info
-
-# 解析上传的 JSON 文件
-def parse_json(file):
-    with open(str(file), 'r', encoding='utf-8') as f:
-        content = f.read()
-    # 继续处理 content...
-    return json.loads(content)
 
 
 
@@ -402,14 +423,14 @@ with gr.Blocks() as demo:
     with gr.Row():
         with gr.Column():
             model_type = gr.Dropdown(choices=model_types, label="模型类型")
-            model_path = gr.Textbox(label="模型路径", value="s3://your_bucket/your_sd_model_path")
+            model_path = gr.Textbox(label="模型路径", value="s3://sagemaker-us-west-2-687912291502/models/clip")
             comfy_dir = gr.Textbox(label="ComfyUI 模型目录", visible=False)
             s3_path = gr.Textbox(label="S3 模型路径", visible=False)
             model_info = gr.Textbox(label="模型信息", interactive=False)
             add_model_btn = gr.Button("添加模型")
             clear_models_btn = gr.Button("清除模型")
 
-            node_url = gr.Textbox(label="Node Git URL", value="https://github.com/example/custom_node.git")
+            node_url = gr.Textbox(label="Node Git URL", value="https://github.com/Acly/comfyui-tooling-nodes.git")
             node_info = gr.Textbox(label="Node URL 信息", interactive=False)
             add_node_btn = gr.Button("添加 Customer Nodes")
             clear_nodes_btn = gr.Button("清除 Nodes")
@@ -423,7 +444,8 @@ with gr.Blocks() as demo:
             endpoint_dropdown = gr.Dropdown(label="推理端点", choices=get_inservice_sagemaker_endpoints(region.value))
             refresh_btn = gr.Button("刷新")
             json_file = gr.File(label="上传 JSON 文件")
-            json_text = gr.Textbox(label="JSON 内容", lines=10)
+            #json_text = gr.Textbox(label="JSON 内容", lines=10)
+            json_text = gr.Code(label="JSON 内容", language="json", lines=20)
             save_btn = gr.Button("保存")
             run_btn = gr.Button("运行")
             image_output = gr.Gallery(label="生成的图像")
