@@ -19,6 +19,7 @@ from sagemaker_ssh_helper.wrapper import SSHModelWrapper
 from sagemaker import get_execution_role,session
 from sagemaker import Model, image_uris, serializers, deserializers
 import sagemaker
+import tempfile
 
 # 初始化sagemaker
 role = get_execution_role()
@@ -253,7 +254,7 @@ def deploy_model(instance_type, region):
     with open('docker/Dockerfile_deploy', 'w') as file:
         file.write(rendered_content)
 
-    gr.info("New Dockerfile has been generated.")
+    gr.Info("New Dockerfile has been generated.")
 
     ## step1: build docker image
     deploy_info = f"开始build镜像（初次build会下载base image，有一定的时间，请耐心等待"
@@ -287,7 +288,7 @@ def deploy_model(instance_type, region):
 
 
 
-    deploy_info = f"开始部署模型\n实例类型: {instance_type}\n区域: {region}\n"
+    deploy_info += f"开始部署模型\n实例类型: {instance_type}\n区域: {region}\n"
     yield deploy_info
 
     ## step3: start deployment
@@ -296,20 +297,13 @@ def deploy_model(instance_type, region):
         # 创建 SageMaker endpoint
         endpoint_name = sagemaker.utils.name_from_base("comfyui-byoc")
         ssh_wrapper = SSHModelWrapper.create(model, connection_wait_time_seconds=0)
+        deploy_info += f"正在创建 SageMaker endpoint: {endpoint_name}\n"
+        yield deploy_info
         model.deploy(initial_instance_count=1,
              instance_type=instance_type,
              endpoint_name=endpoint_name,
              container_startup_health_check_timeout=800
             )
-        deploy_info += f"正在创建 SageMaker endpoint: {endpoint_name}\n"
-        yield deploy_info
-
-        # 模拟部署过程
-        for i in range(5):
-            time.sleep(2)  # 等待2秒
-            deploy_info += f"部署进度: {(i+1)*20}%\n"
-            yield deploy_info
-
         # 使用 AWS CLI 查询部署日志
         cmd = f"aws sagemaker describe-endpoint --endpoint-name {endpoint_name} --region {region}"
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
@@ -350,7 +344,7 @@ def run_inference(endpoint_name):
          "method":"queue_prompt"
     }
     prompt_id = predict(endpoint_name,payload)["prompt_id"]
-    gr.Info("任务已提交:"+prompt_id)
+    gr.Info("任务已提交:"+str(prompt_id))
 
     # step2: 查询状态
     payload={
@@ -361,7 +355,7 @@ def run_inference(endpoint_name):
     }
     while True:
         status = predict(endpoint_name,payload)
-        gr.Info("任务状态:"+status)
+        gr.Info("任务状态:"+status['status'])
         time.sleep(10)
         if status["status"] == "success":
             break
@@ -374,7 +368,7 @@ def run_inference(endpoint_name):
      "method":"get_images"
     }
     result = predict(endpoint_name,payload)
-    gr.Info("结果文件:"+result['prediction'])
+    gr.Info("结果文件:"+str(result['prediction']))
 
     # step4: 下载并处理 S3 图片
     s3_client = boto3.client('s3')
