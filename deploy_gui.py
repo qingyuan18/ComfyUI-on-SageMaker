@@ -33,10 +33,11 @@ print(f'sagemaker sdk version: {sagemaker.__version__}\nrole:  {role}  \nbucket:
 
 
 # 初始化全局变量
-models = {}
+models = {"s3_bucket": bucket}
 node_urls = []
 json_content = ""
 temp_file_path = None
+deploy_info = ""
 
 # 模型菜单选项
 model_types = ["基座模型", "lora模型", "controlnet模型", "clip vision模型", "clip模型", "Flux lora模型（xlab）", "Flux ipadapter模型（xlab)","其他模型"]
@@ -45,6 +46,254 @@ model_types_values = ["MODEL_PATH","LORA_MODEL_PATH","CONTROLNET_MODEL_PATH","CL
 # 机型选项
 instance_types = ["ml.g5.2xlarge", "ml.g5.4xlarge"]
 
+
+### gui utility functions
+def parse_json(file):
+    if file is not None:
+        file_path = file.name
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = json.load(f)
+        formatted_content = json.dumps(content, indent=2, ensure_ascii=False)
+        return formatted_content
+    return ""
+
+
+
+def save_json(content):
+    global temp_file_path
+    try:
+        # 解析JSON字符串
+        parsed_json = json.loads(content)
+        # 创建一个临时文件
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8') as temp_file:
+            # 写入格式化的JSON
+            json.dump(parsed_json, temp_file, indent=2, ensure_ascii=False)
+            temp_file_path = temp_file.name
+        gr.Info("JSON 内容已保存")
+        return content
+    except json.JSONDecodeError:
+        gr.Error("无效的 JSON 格式")
+        return
+
+
+
+# 清除模型
+def clear_models():
+    global models
+    models = {}
+    return gr.update(value="")
+
+# 清除 Nodes
+def clear_nodes():
+    global node_urls
+    node_urls = []
+    return gr.update(value="")
+
+def update_visibility(model_type):
+    if model_type == "其他模型":
+        return gr.update(visible=True), gr.update(visible=True), gr.update(visible=False)
+    else:
+        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True)
+
+# 添加模型
+def add_model(model_type, model_path, comfy_dir=None, s3_path=None):
+    global models
+    index = model_types.index(model_type)
+    key = model_types_values[index]
+
+    if model_type == "其他模型":
+        if comfy_dir and s3_path:
+            new_value = f"{comfy_dir}|{s3_path}"
+            if key in models:
+                models[key] += f";{new_value}"
+            else:
+                models[key] = new_value
+    else:
+        models[key] = model_path
+    return gr.update(value=f"当前模型配置：\n{json.dumps(models, indent=2, ensure_ascii=False)}")
+
+# 添加 customer nodes
+def add_node(node_url):
+    global node_urls
+    node_urls.append(node_url)
+    return gr.update(value=f"当前 Node URLs：\n{json.dumps(node_urls, indent=2, ensure_ascii=False)}")
+
+# 部署模型
+def deploy_model(instance_type, region, progress=gr.Progress()):
+    print("here0====")
+    global models, node_urls
+    deploy_output = ""
+    # 读取 Dockerfile 模板
+    with open('docker/dockerfile.template', 'r') as file:
+        template_content = file.read()
+    # 创建 Jinja2 模板对象
+    template = Template(template_content)
+    # 定义要克隆的 Git 仓库 URL 列表
+    git_urls = node_urls
+    # 生成 git clone 命令列表
+    git_clone_commands = []
+    for url in git_urls:
+        repo_name = os.path.splitext(os.path.basename(url))[0]
+        command = f"RUN git clone {url} /opt/program/custom_nodes/{repo_name}"
+        git_clone_commands.append(command)
+    # 渲染模板
+    rendered_content = template.render(git_clone_commands=git_clone_commands)
+    # 将渲染后的内容写入新的 Dockerfile
+    with open('docker/Dockerfile_deploy', 'w') as file:
+        file.write(rendered_content)
+
+    #gr.Info("New Dockerfile has been generated.")
+    progress(0, desc="New Dockerfile has been generated.")
+
+    ## step1: build docker image
+    deploy_output=f"开始build镜像（初次build会下载base image，有一定的时间，请耐心等待)"
+    #gr.Info(deploy_output)
+    progress(0.2, desc=deploy_output)
+
+    # AWS ECR login
+    os.system("aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 763104351884.dkr.ecr.us-west-2.amazonaws.com")
+    # Build and push
+    os.system("./build_and_push.sh ./docker/Dockerfile_deploy")
+    # Create dummy file and tar
+    with open('dummy', 'w') as f:
+        pass
+    os.system("tar czvf model.tar.gz dummy")
+    # Set S3 paths
+    assets_dir = f's3://{bucket}/stablediffusion/assets/'
+    model_data = f's3://{bucket}/stablediffusion/assets/model.tar.gz'
+    # Upload to S3
+    os.system("aws s3 cp model.tar.gz "+assets_dir)
+    # Clean up
+    os.remove('dummy')
+    os.remove('model.tar.gz')
+
+    ## step2: create sagemaker model config
+    env = models
+    container=f"{account_id}.dkr.ecr.{aws_region}.amazonaws.com/comfyui-inference:latest"
+
+    model = Model(image_uri=container,
+              model_data=model_data,
+              role=role,
+              env=env,
+              #dependencies=[SSHModelWrapper.dependency_dir()]
+              )
+
+    deploy_output = f"开始部署模型\n实例类型: {instance_type}\n区域: {region}\n"
+    #gr.Info(deploy_output)
+    progress(0.4, desc=deploy_output)
+
+    ## step3: start deployment
+    endpoint_name = f"comfyui-endpoint-{int(time.time())}"
+    try:
+        deploy_output = f"正在创建 SageMaker endpoint: {endpoint_name}\n"
+        gr.Info(deploy_output)
+        model.deploy(initial_instance_count=1,
+             instance_type=instance_type,
+             endpoint_name=endpoint_name,
+             container_startup_health_check_timeout=2600
+            )
+        deploy_output += f"{endpoint_name}部署成功!\n"
+        #gr.Info(deploy_output)
+        progress(1, desc=deploy_output)
+        print("here2====")
+        return
+    except Exception as e:
+        print("here3====")
+        print(e)
+        deploy_output += f"部署过程中出现错误: {str(e)}\n"
+        gr.Info(deploy_output)
+        return
+
+
+
+
+
+# 运行推理
+def run_inference(endpoint_name):
+    global temp_file_path
+    if temp_file_path is None:
+        return gr.Error("请先保存 JSON 内容")
+
+    # step1:提交prompt请求
+    prompt_json_file=temp_file_path
+    prompt_text=""
+    with open(prompt_json_file) as f:
+        prompt_text = json.load(f)
+    client_id = str(uuid.uuid4())
+    payload={
+         "client_id":client_id,
+         "prompt": prompt_text,
+         "inference_type":"text2img",
+         "method":"queue_prompt"
+    }
+    prompt_id = predict(endpoint_name,payload)["prompt_id"]
+    gr.Info("任务已提交:"+str(prompt_id))
+
+    # step2: 查询状态
+    payload={
+     "client_id":client_id,
+     "prompt_id":prompt_id,
+     "inference_type":"text2img",
+     "method":"get_status"
+    }
+    while True:
+        status = predict(endpoint_name,payload)
+        gr.Info("任务状态:"+status['status'])
+        time.sleep(10)
+        if status["status"] == "success":
+            break
+
+    # step3:获取结果
+    payload={
+     "client_id":client_id,
+     "prompt_id":prompt_id,
+     "inference_type":"text2img",
+     "method":"get_images"
+    }
+    result = predict(endpoint_name,payload)
+    gr.Info("结果文件:"+str(result['prediction']))
+
+    # step4: 下载并处理 S3 图片
+    s3_client = boto3.client('s3')
+    image_list = []
+    for s3_url in result['prediction']:
+        # 解析 S3 URL
+        bucket_name = s3_url.split('/')[2]
+        object_key = '/'.join(s3_url.split('/')[3:])
+        # 下载图片
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
+            s3_client.download_fileobj(bucket_name, object_key, temp_file)
+            temp_file_path = temp_file.name
+        # 打开图片并添加到列表
+        image = Image.open(temp_file_path)
+        image_list.append(image)
+        # 删除临时文件
+        os.unlink(temp_file_path)
+    return image_list
+
+
+# 获取 SageMaker endpoints
+def get_inservice_sagemaker_endpoints(region):
+    sagemaker = boto3.client('sagemaker', region_name=region)
+    inservice_endpoints = []
+    next_token = None
+    while True:
+        if next_token:
+            response = sagemaker.list_endpoints(NextToken=next_token, StatusEquals='InService')
+        else:
+            response = sagemaker.list_endpoints(StatusEquals='InService')
+        inservice_endpoints.extend([endpoint['EndpointName'] for endpoint in response['Endpoints']])
+        if 'NextToken' in response:
+            next_token = response['NextToken']
+        else:
+            break
+    return inservice_endpoints
+
+
+# 刷新 endpoints 列表
+def refresh_endpoints(region):
+    endpoints = get_inservice_sagemaker_endpoints(region)
+    return gr.update(choices=endpoints)
 
 ##### sagemaker utility functions ######
 s3_client = boto3.client('s3')
@@ -141,281 +390,8 @@ def check_sendpoint_status(endpoint_name,timeout=600):
             break
 
 
-##### func for gui #############
-# 解析上传的 JSON 文件
-#def parse_json(file):
-#    if file is not None:
-#        file_path = file.name
-#        with open(file_path, 'r', encoding='utf-8') as f:
-#            content = f.read()
-#        return content
-#    return ""
-
-def parse_json(file):
-    if file is not None:
-        file_path = file.name
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = json.load(f)
-        formatted_content = json.dumps(content, indent=2, ensure_ascii=False)
-        return formatted_content
-    return ""
 
 
-
-# 保存 JSON 内容
-#def save_json(content):
-#    global temp_file_path
-#    # 创建一个临时文件
-#    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8') as temp_file:
-#        temp_file.write(content)
-#        temp_file_path = temp_file.name
-#
-#    return gr.Info("JSON 内容已保存")
-
-def save_json(content):
-    global temp_file_path
-    try:
-        # 解析JSON字符串
-        parsed_json = json.loads(content)
-        # 创建一个临时文件
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8') as temp_file:
-            # 写入格式化的JSON
-            json.dump(parsed_json, temp_file, indent=2, ensure_ascii=False)
-            temp_file_path = temp_file.name
-        gr.Info("JSON 内容已保存")
-        return content
-    except json.JSONDecodeError:
-        gr.Error("无效的 JSON 格式")
-        return
-
-
-
-# 清除模型
-def clear_models():
-    global models
-    models = {}
-    return gr.update(value="")
-
-# 清除 Nodes
-def clear_nodes():
-    global node_urls
-    node_urls = []
-    return gr.update(value="")
-
-def update_visibility(model_type):
-    if model_type == "其他模型":
-        return gr.update(visible=True), gr.update(visible=True), gr.update(visible=False)
-    else:
-        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True)
-
-# 添加模型
-def add_model(model_type, model_path, comfy_dir=None, s3_path=None):
-    global models
-    index = model_types.index(model_type)
-    key = model_types_values[index]
-
-    if model_type == "其他模型":
-        if comfy_dir and s3_path:
-            new_value = f"{comfy_dir}|{s3_path}"
-            if key in models:
-                models[key] += f";{new_value}"
-            else:
-                models[key] = new_value
-    else:
-        models[key] = model_path
-
-    return gr.update(value=f"当前模型配置：\n{json.dumps(models, indent=2, ensure_ascii=False)}")
-
-# 添加 customer nodes
-def add_node(node_url):
-    global node_urls
-    node_urls.append(node_url)
-    return gr.update(value=f"当前 Node URLs：\n{json.dumps(node_urls, indent=2, ensure_ascii=False)}")
-
-# 部署模型
-def deploy_model(instance_type, region):
-    global models, node_urls
-    # 读取 Dockerfile 模板
-    with open('docker/dockerfile.template', 'r') as file:
-        template_content = file.read()
-    # 创建 Jinja2 模板对象
-    template = Template(template_content)
-    # 定义要克隆的 Git 仓库 URL 列表
-    git_urls = node_urls
-    # 生成 git clone 命令列表
-    git_clone_commands = []
-    for url in git_urls:
-        repo_name = os.path.splitext(os.path.basename(url))[0]
-        command = f"RUN git clone {url} /opt/program/custom_nodes/{repo_name}"
-        git_clone_commands.append(command)
-    # 渲染模板
-    rendered_content = template.render(git_clone_commands=git_clone_commands)
-    # 将渲染后的内容写入新的 Dockerfile
-    with open('docker/Dockerfile_deploy', 'w') as file:
-        file.write(rendered_content)
-
-    gr.Info("New Dockerfile has been generated.")
-
-    ## step1: build docker image
-    deploy_info = f"开始build镜像（初次build会下载base image，有一定的时间，请耐心等待"
-    yield deploy_info
-    # AWS ECR login
-    subprocess.run("aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 763104351884.dkr.ecr.us-west-2.amazonaws.com", shell=True, check=True)
-    # Build and push
-    subprocess.run("./build_and_push.sh ./docker/Dockerfile_deploy", shell=True, check=True)
-    # Create dummy file and tar
-    with open('dummy', 'w') as f:
-        pass
-    subprocess.run(["tar", "czvf", "model.tar.gz", "dummy"], check=True)
-    # Set S3 paths
-    assets_dir = f's3://{bucket}/stablediffusion/assets/'
-    model_data = f's3://{bucket}/stablediffusion/assets/model.tar.gz'
-    # Upload to S3
-    subprocess.run(["aws", "s3", "cp", "model.tar.gz", assets_dir], check=True)
-    # Clean up
-    os.remove('dummy')
-    os.remove('model.tar.gz')
-
-    ## step2: create sagemaker model config
-    env = models
-    container=f"{account_id}.dkr.ecr.{aws_region}.amazonaws.com/comfyui-inference:latest"
-
-    model = Model(image_uri=container,
-              model_data=model_data,
-              role=role,
-              env=env,
-              dependencies=[SSHModelWrapper.dependency_dir()] )
-
-
-
-    deploy_info += f"开始部署模型\n实例类型: {instance_type}\n区域: {region}\n"
-    yield deploy_info
-
-    ## step3: start deployment
-    endpoint_name = f"comfyui-endpoint-{int(time.time())}"
-    print("here0====")
-    try:
-        # 创建 SageMaker endpoint
-        endpoint_name = sagemaker.utils.name_from_base("comfyui-byoc")
-        ssh_wrapper = SSHModelWrapper.create(model, connection_wait_time_seconds=0)
-        deploy_info += f"正在创建 SageMaker endpoint: {endpoint_name}\n"
-        yield deploy_info
-        model.deploy(initial_instance_count=1,
-             instance_type=instance_type,
-             endpoint_name=endpoint_name,
-             container_startup_health_check_timeout=2600
-            )
-        print("here1====")
-        deploy_info += f"{endpoint_name}部署成功!\n"
-        yield deploy_info
-        # 使用 AWS CLI 查询部署日志
-        #cmd = f"aws sagemaker describe-endpoint --endpoint-name {endpoint_name} --region {aws_region}"
-        #process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
-        #output, error = process.communicate()
-        #print("here2===")
-
-        #if process.returncode == 0:
-        #    endpoint_info = json.loads(output)
-        #    status = endpoint_info['EndpointStatus']
-        #    deploy_info += f"Endpoint 状态: {status}\n"
-        #    deploy_info += f"部署日志:\n{json.dumps(endpoint_info, indent=2)}\n"
-        #else:
-        #    deploy_info += f"获取部署日志失败: {error}\n"
-
-    except Exception as e:
-        deploy_info += f"部署过程中出现错误: {str(e)}\n"
-
-    deploy_info += "部署完成\n"
-    yield deploy_info
-
-
-
-# 运行推理
-def run_inference(endpoint_name):
-    global temp_file_path
-    if temp_file_path is None:
-        return gr.Error("请先保存 JSON 内容")
-
-    # step1:提交prompt请求
-    prompt_json_file=temp_file_path
-    prompt_text=""
-    with open(prompt_json_file) as f:
-        prompt_text = json.load(f)
-    client_id = str(uuid.uuid4())
-    payload={
-         "client_id":client_id,
-         "prompt": prompt_text,
-         "inference_type":"text2img",
-         "method":"queue_prompt"
-    }
-    prompt_id = predict(endpoint_name,payload)["prompt_id"]
-    gr.Info("任务已提交:"+str(prompt_id))
-
-    # step2: 查询状态
-    payload={
-     "client_id":client_id,
-     "prompt_id":prompt_id,
-     "inference_type":"text2img",
-     "method":"get_status"
-    }
-    while True:
-        status = predict(endpoint_name,payload)
-        gr.Info("任务状态:"+status['status'])
-        time.sleep(10)
-        if status["status"] == "success":
-            break
-
-    # step3:获取结果
-    payload={
-     "client_id":client_id,
-     "prompt_id":prompt_id,
-     "inference_type":"text2img",
-     "method":"get_images"
-    }
-    result = predict(endpoint_name,payload)
-    gr.Info("结果文件:"+str(result['prediction']))
-
-    # step4: 下载并处理 S3 图片
-    s3_client = boto3.client('s3')
-    image_list = []
-    for s3_url in result['prediction']:
-        # 解析 S3 URL
-        bucket_name = s3_url.split('/')[2]
-        object_key = '/'.join(s3_url.split('/')[3:])
-        # 下载图片
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
-            s3_client.download_fileobj(bucket_name, object_key, temp_file)
-            temp_file_path = temp_file.name
-        # 打开图片并添加到列表
-        image = Image.open(temp_file_path)
-        image_list.append(image)
-        # 删除临时文件
-        os.unlink(temp_file_path)
-    return image_list
-
-
-# 获取 SageMaker endpoints
-def get_inservice_sagemaker_endpoints(region):
-    sagemaker = boto3.client('sagemaker', region_name=region)
-    inservice_endpoints = []
-    next_token = None
-    while True:
-        if next_token:
-            response = sagemaker.list_endpoints(NextToken=next_token, StatusEquals='InService')
-        else:
-            response = sagemaker.list_endpoints(StatusEquals='InService')
-        inservice_endpoints.extend([endpoint['EndpointName'] for endpoint in response['Endpoints']])
-        if 'NextToken' in response:
-            next_token = response['NextToken']
-        else:
-            break
-    return inservice_endpoints
-
-
-# 刷新 endpoints 列表
-def refresh_endpoints(region):
-    endpoints = get_inservice_sagemaker_endpoints(region)
-    return gr.update(choices=endpoints)
 
 # 创建 Gradio 界面
 with gr.Blocks() as demo:
@@ -437,32 +413,30 @@ with gr.Blocks() as demo:
             instance_type = gr.Dropdown(choices=instance_types, label="机型", value="ml.g5.2xlarge")
             region = gr.Textbox(label="区域", value="us-west-2")
             deploy_btn = gr.Button("部署")
-            deploy_info = gr.Textbox(label="部署信息", interactive=False)
-
+            deploy_progress = gr.Textbox("部署进度")
         with gr.Column():
             endpoint_dropdown = gr.Dropdown(label="推理端点", choices=get_inservice_sagemaker_endpoints(region.value))
             refresh_btn = gr.Button("刷新")
             json_file = gr.File(label="上传 JSON 文件")
-            #json_text = gr.Textbox(label="JSON 内容", lines=10)
             json_text = gr.Code(label="JSON 内容", language="json", lines=20)
             save_btn = gr.Button("保存")
             run_btn = gr.Button("运行")
             image_output = gr.Gallery(label="生成的图像")
 
-    add_node_btn.click(add_node, inputs=node_url, outputs=node_info)
-    deploy_btn.click(deploy_model, inputs=[instance_type, region], outputs=deploy_info)
-    model_type.change(update_visibility, inputs=[model_type], outputs=[comfy_dir, s3_path, model_path])
-    add_model_btn.click(
-        add_model,
-        inputs=[model_type, model_path, comfy_dir, s3_path],
-        outputs=model_info
-    )
-    clear_models_btn.click(clear_models, outputs=model_info)
-    clear_nodes_btn.click(clear_nodes, outputs=node_info)
-
-    refresh_btn.click(refresh_endpoints, inputs=[region], outputs=[endpoint_dropdown])
-    json_file.upload(parse_json, inputs=[json_file], outputs=[json_text])
-    save_btn.click(save_json, inputs=[json_text])
-    run_btn.click(run_inference, inputs=[endpoint_dropdown], outputs=[image_output])
-
+        ## listener
+        add_node_btn.click(add_node, inputs=node_url, outputs=node_info)
+        deploy_btn.click(fn=deploy_model, inputs=[instance_type, region],outputs=deploy_progress)
+        model_type.change(update_visibility, inputs=[model_type], outputs=[comfy_dir, s3_path, model_path])
+        add_model_btn.click(
+            add_model,
+            inputs=[model_type, model_path, comfy_dir, s3_path],
+            outputs=model_info
+        )
+        clear_models_btn.click(clear_models, outputs=model_info)
+        clear_nodes_btn.click(clear_nodes, outputs=node_info)
+        refresh_btn.click(refresh_endpoints, inputs=[region], outputs=[endpoint_dropdown])
+        json_file.upload(parse_json, inputs=[json_file], outputs=[json_text])
+        save_btn.click(save_json, inputs=[json_text])
+        run_btn.click(run_inference, inputs=[endpoint_dropdown], outputs=image_output)
+        #demo.load(get_status, outputs=deploy_info_text, every=5)
 demo.launch()
