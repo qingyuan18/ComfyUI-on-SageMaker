@@ -44,7 +44,7 @@ model_types = ["基座模型", "lora模型", "controlnet模型", "clip vision模
 model_types_values = ["MODEL_PATH","LORA_MODEL_PATH","CONTROLNET_MODEL_PATH","CLIP_VIT_MODEL_PATH","CLIP_MODEL_PATH","FLUX_LORA_MODEL_PATH","FLUX_IPADAPTER_MODEL_PATH","OTHER_MODEL_PATHS"]
 
 # 机型选项
-instance_types = ["ml.g5.2xlarge", "ml.g5.4xlarge"]
+instance_types = ["ml.g5.2xlarge", "ml.g5.4xlarge","ml.g4dn.2xlarge"]
 
 
 ### gui utility functions
