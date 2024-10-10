@@ -24,6 +24,7 @@ RUN pip install imageio_ffmpeg
 RUN pip install wget
 RUN pip install retry
 RUN pip install segment-anything
+RUN pip install bitsandbytes
 
 #RUN apt install net-tools
 

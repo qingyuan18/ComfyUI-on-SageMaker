@@ -35,7 +35,7 @@ docker login --username AWS -p ${pwd} ${account}.dkr.ecr.${region}.amazonaws.com
 
 
 git clone -b flux https://github.com/qingyuan18/ComfyUI.git
-dockerfile="./docer/dockerfile-flux"
+dockerfile="./docker/dockerfile-flux"
 # 如果提供了参数，则使用该参数作为 Dockerfile 名称
 if [ $# -eq 1 ]; then
     dockerfile=$1
