@@ -151,7 +151,8 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
     progress(0.2, desc=deploy_output)
 
     # AWS ECR login
-    os.system("aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 763104351884.dkr.ecr.us-west-2.amazonaws.com")
+    #os.system("aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 763104351884.dkr.ecr.us-west-2.amazonaws.com")
+    os.system("aws ecr get-login-password --region "+aws_region+" | docker login --username AWS --password-stdin 763104351884.dkr.ecr."+aws_region+".amazonaws.com")
     # Build and push
     os.system("./build_and_push.sh ./docker/Dockerfile_deploy")
     # Create dummy file and tar
