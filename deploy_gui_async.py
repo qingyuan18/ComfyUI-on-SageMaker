@@ -151,7 +151,7 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
     progress(0.2, desc=deploy_output)
 
     # AWS ECR login
-    os.system("aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 763104351884.dkr.ecr.us-west-2.amazonaws.com")
+    os.system("aws ecr get-login-password --region "+aws_region+" | docker login --username AWS --password-stdin 763104351884.dkr.ecr."+aws_region+".amazonaws.com")
     # Build and push
     os.system("./build_and_push.sh ./docker/Dockerfile_deploy")
     # Create dummy file and tar
@@ -323,14 +323,14 @@ def get_result(output_location):
         print(predictions['result'])
         return predictions
     except Exception as e:
-        gr.info("result is not completed, waiting...")  
+        gr.Info("result is not completed, waiting...")
 
 def wait_async_result(output_location,timeout=60):
     current_time=0
     result = None
     while current_time<timeout:
         if s3_object_exists(output_location):
-            gr.info("have async result")
+            gr.Info("have async result")
             result=get_result(output_location)
             break
         else:
@@ -345,7 +345,7 @@ def predict_async(endpoint_name,payload):
     payload_data = json.dumps(payload).encode('utf-8')
     s3_object.put( Body=bytes(payload_data))
     input_location=f's3://{bucket}/stablediffusion/asyncinvoke/input/{input_file}'
-    gr.info(f'input_location: {input_location}')
+    gr.Info(f'input_location: {input_location}')
     response = runtime_client.invoke_endpoint_async(
         EndpointName=endpoint_name,
         InputLocation=input_location
