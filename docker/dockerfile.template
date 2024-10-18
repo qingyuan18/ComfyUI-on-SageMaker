@@ -17,7 +17,7 @@ COPY ComfyUI /opt/program
 RUN pip install -r /opt/program/requirements.txt
 
 ####upgrade torch/torchversion/cuda121 relevant dependence
-RUN pip install torch torchvision --upgrade --index-url https://download.pytorch.org/whl/cu121
+#RUN pip install torch torchvision --upgrade --index-url https://download.pytorch.org/whl/cu121
 RUN pip install -U xformers
 RUN pip install scikit-image
 RUN pip install imageio_ffmpeg

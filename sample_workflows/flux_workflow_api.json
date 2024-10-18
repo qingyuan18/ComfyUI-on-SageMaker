@@ -97,24 +97,11 @@
   },
   "37": {
     "inputs": {
-      "ckpt_name": "FLUX1/flux1-schnell-fp8.safetensors"
+      "ckpt_name": "flux1-dev-fp8.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
       "title": "Load Checkpoint"
-    }
-  },
-  "43": {
-    "inputs": {
-      "ckpt_name": {
-        "content": "FLUX1/flux1-schnell-fp8.safetensors",
-        "image": null
-      },
-      "example": "[none]"
-    },
-    "class_type": "CheckpointLoader|pysssss",
-    "_meta": {
-      "title": "Checkpoint Loader 🐍"
     }
   },
   "44": {

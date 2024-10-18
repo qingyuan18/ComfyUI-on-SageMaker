@@ -17,14 +17,14 @@ COPY ComfyUI /opt/program
 RUN pip install -r /opt/program/requirements.txt
 
 ####upgrade torch/torchversion/cuda121 relevant dependence
-RUN pip install torch torchvision --upgrade --index-url https://download.pytorch.org/whl/cu121
+#RUN pip install torch torchvision --upgrade --index-url https://download.pytorch.org/whl/cu121
+#RUN pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu124
 RUN pip install -U xformers
 RUN pip install scikit-image
 RUN pip install imageio_ffmpeg
 RUN pip install wget
 RUN pip install retry
 RUN pip install segment-anything
-RUN pip install bitsandbytes
 
 #RUN apt install net-tools
 
