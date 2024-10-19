@@ -42,6 +42,7 @@ RUN mv ./ae.safetensors /opt/program/models/vae/
 {% endfor %}
 RUN mkdir -p /opt/program/models/xlabs/ipadapters
 RUN mkdir -p /opt/program/models/xlabs/loras
+RUN mkdir -p /opt/program/models/xlabs/controlnets
 
 
 

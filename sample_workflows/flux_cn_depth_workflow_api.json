@@ -1,0 +1,234 @@
+{
+  "3": {
+    "inputs": {
+      "noise_seed": 324242532548,
+      "steps": 25,
+      "timestep_to_start_cfg": 1,
+      "true_gs": 3.5,
+      "image_to_image_strength": 0,
+      "denoise_strength": 1,
+      "model": [
+        "32",
+        0
+      ],
+      "conditioning": [
+        "5",
+        0
+      ],
+      "neg_conditioning": [
+        "19",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "controlnet_condition": [
+        "14",
+        0
+      ]
+    },
+    "class_type": "XlabsSampler",
+    "_meta": {
+      "title": "Xlabs Sampler"
+    }
+  },
+  "4": {
+    "inputs": {
+      "clip_name1": "clip_l.safetensors",
+      "clip_name2": "google_t5-v1_1-xxl_encoderonly-fp8_e4m3fn.safetensors",
+      "type": "flux"
+    },
+    "class_type": "DualCLIPLoader",
+    "_meta": {
+      "title": "DualCLIPLoader"
+    }
+  },
+  "5": {
+    "inputs": {
+      "clip_l": "This is a beautiful and serene image. The person is sitting on the desert, looking out towards far away. The lighting suggests it might be either early morning or late afternoon, given the soft, diffused light. The person is wearing a light-colored dress, which contrasts nicely with the dark sand and the golden of the desert. The overall mood of the image is contemplative and peaceful, capturing a moment of solitude and connection with nature.",
+      "t5xxl": "This is a beautiful and serene image. The person is sitting on the desert, looking out towards far away. The lighting suggests it might be either early morning or late afternoon, given the soft, diffused light. The person is wearing a light-colored dress, which contrasts nicely with the dark sand and the golden of the desert. The overall mood of the image is contemplative and peaceful, capturing a moment of solitude and connection with nature.",
+      "guidance": 4,
+      "clip": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncodeFlux",
+    "_meta": {
+      "title": "CLIPTextEncodeFlux"
+    }
+  },
+  "6": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "7": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "8": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "13": {
+    "inputs": {
+      "model_name": "flux-dev",
+      "controlnet_path": "flux-depth-controlnet-v3.safetensors"
+    },
+    "class_type": "LoadFluxControlNet",
+    "_meta": {
+      "title": "Load Flux ControlNet"
+    }
+  },
+  "14": {
+    "inputs": {
+      "strength": 0.7000000000000001,
+      "controlnet": [
+        "13",
+        0
+      ],
+      "image": [
+        "49",
+        0
+      ]
+    },
+    "class_type": "ApplyFluxControlNet",
+    "_meta": {
+      "title": "Apply Flux ControlNet"
+    }
+  },
+  "16": {
+    "inputs": {
+      "image": "reference_002.png",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "19": {
+    "inputs": {
+      "clip_l": "bad photo",
+      "t5xxl": "bad photo",
+      "guidance": 4,
+      "clip": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncodeFlux",
+    "_meta": {
+      "title": "CLIPTextEncodeFlux"
+    }
+  },
+  "21": {
+    "inputs": {
+      "images": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "23": {
+    "inputs": {
+      "filename_prefix": "canny_res",
+      "images": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "32": {
+    "inputs": {
+      "unet_name": "flux1-dev-fp8-unet.safetensors",
+      "weight_dtype": "fp8_e4m3fn"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "39": {
+    "inputs": {
+      "images": [
+        "49",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "46": {
+    "inputs": {
+      "filename_prefix": "canny_process",
+      "images": [
+        "49",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "49": {
+    "inputs": {
+      "a": 6.283185307179586,
+      "bg_threshold": 0.1,
+      "resolution": 1024,
+      "image": [
+        "51",
+        0
+      ]
+    },
+    "class_type": "MiDaS-DepthMapPreprocessor",
+    "_meta": {
+      "title": "MiDaS Depth Map"
+    }
+  },
+  "51": {
+    "inputs": {
+      "image": ""
+    },
+    "class_type": "ETN_LoadImageBase64",
+    "_meta": {
+      "title": "Load Image (Base64)"
+    }
+  }
+}
