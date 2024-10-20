@@ -153,7 +153,7 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
     # AWS ECR login
     os.system("aws ecr get-login-password --region "+aws_region+" | docker login --username AWS --password-stdin 763104351884.dkr.ecr."+aws_region+".amazonaws.com")
     # Build and push
-    os.system("./build_and_push.sh ./docker/Dockerfile_deploy")
+    os.system("bash ./build_and_push.sh ./docker/Dockerfile_deploy")
     # Create dummy file and tar
     with open('dummy', 'w') as f:
         pass
@@ -175,7 +175,7 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
               model_data=model_data,
               role=role,
               env=env,
-              #dependencies=[SSHModelWrapper.dependency_dir()] 
+              #dependencies=[SSHModelWrapper.dependency_dir()]
               )
 
     deploy_output = f"开始部署模型\n实例类型: {instance_type}\n区域: {region}\n"
@@ -183,7 +183,7 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
     progress(0.4, desc=deploy_output)
 
     ## step3: start deployment
-    endpoint_name = f"comfyui-endpoint-{int(time.time())}"  
+    endpoint_name = f"comfyui-endpoint-{int(time.time())}"
     try:
         deploy_output = f"正在创建 SageMaker endpoint: {endpoint_name}\n"
         gr.Info(deploy_output)
@@ -196,13 +196,13 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
         #gr.Info(deploy_output)
         progress(1, desc=deploy_output)
         print("here2====")
-        return 
+        return
     except Exception as e:
         print("here3====")
         print(e)
         deploy_output += f"部署过程中出现错误: {str(e)}\n"
         gr.Info(deploy_output)
-        return 
+        return
 
 
 
@@ -270,7 +270,7 @@ def get_inservice_sagemaker_endpoints(region):
 # 刷新 endpoints 列表
 def refresh_endpoints(region):
     endpoints = get_inservice_sagemaker_endpoints(region)
-    return gr.update(choices=endpoints)  
+    return gr.update(choices=endpoints)
 
 ##### sagemaker utility functions ######
 s3_client = boto3.client('s3')
@@ -300,13 +300,13 @@ def s3_object_exists(s3_path):
         base_name=os.path.basename(s3_path)
         _,ext_name=os.path.splitext(base_name)
         bucket,key=get_bucket_and_key(s3_path)
-        
+
         s3.head_object(Bucket=bucket, Key=key)
         return True
     except Exception as ex:
-        print("job is not completed, waiting...")   
+        print("job is not completed, waiting...")
         return False
-        
+
 def get_bucket_and_key(s3uri):
     pos = s3uri.find('/', 5)
     bucket = s3uri[5 : pos]
@@ -318,7 +318,7 @@ def get_result(output_location):
     try:
         bucket, key = get_bucket_and_key(output_location)
         obj = s3_resource.Object(bucket, key)
-        body = obj.get()['Body'].read().decode('utf-8') 
+        body = obj.get()['Body'].read().decode('utf-8')
         predictions = json.loads(body)
         print(predictions['result'])
         return predictions
@@ -410,14 +410,14 @@ def check_sendpoint_status(endpoint_name,timeout=600):
             break
 
 
-            
+
 
 
 # 创建 Gradio 界面
 with gr.Blocks() as demo:
     with gr.Row():
         with gr.Column():
-            model_type = gr.Dropdown(choices=model_types, label="模型类型")
+            model_type = gr.Dropdown(choices=model_types, label="模型类型",value=model_types[4])
             model_path = gr.Textbox(label="模型路径", value="s3://sagemaker-us-west-2-687912291502/models/clip")
             comfy_dir = gr.Textbox(label="ComfyUI 模型目录", visible=False)
             s3_path = gr.Textbox(label="S3 模型路径", visible=False)

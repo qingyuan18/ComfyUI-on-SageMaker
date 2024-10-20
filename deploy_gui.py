@@ -154,7 +154,7 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
     #os.system("aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 763104351884.dkr.ecr.us-west-2.amazonaws.com")
     os.system("aws ecr get-login-password --region "+aws_region+" | docker login --username AWS --password-stdin 763104351884.dkr.ecr."+aws_region+".amazonaws.com")
     # Build and push
-    os.system("./build_and_push.sh ./docker/Dockerfile_deploy")
+    os.system("bash ./build_and_push.sh ./docker/Dockerfile_deploy")
     # Create dummy file and tar
     with open('dummy', 'w') as f:
         pass
@@ -398,7 +398,7 @@ def check_sendpoint_status(endpoint_name,timeout=600):
 with gr.Blocks() as demo:
     with gr.Row():
         with gr.Column():
-            model_type = gr.Dropdown(choices=model_types, label="模型类型")
+            model_type = gr.Dropdown(choices=model_types, label="模型类型",value=model_types[4])
             model_path = gr.Textbox(label="模型路径", value="s3://sagemaker-us-west-2-687912291502/models/clip")
             comfy_dir = gr.Textbox(label="ComfyUI 模型目录", visible=False)
             s3_path = gr.Textbox(label="S3 模型路径", visible=False)

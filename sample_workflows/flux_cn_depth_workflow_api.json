@@ -8,7 +8,7 @@
       "image_to_image_strength": 0,
       "denoise_strength": 1,
       "model": [
-        "32",
+        "55",
         0
       ],
       "conditioning": [
@@ -172,41 +172,6 @@
       "title": "Save Image"
     }
   },
-  "32": {
-    "inputs": {
-      "unet_name": "flux1-dev-fp8-unet.safetensors",
-      "weight_dtype": "fp8_e4m3fn"
-    },
-    "class_type": "UNETLoader",
-    "_meta": {
-      "title": "Load Diffusion Model"
-    }
-  },
-  "39": {
-    "inputs": {
-      "images": [
-        "49",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
-    }
-  },
-  "46": {
-    "inputs": {
-      "filename_prefix": "canny_process",
-      "images": [
-        "49",
-        0
-      ]
-    },
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "Save Image"
-    }
-  },
   "49": {
     "inputs": {
       "a": 6.283185307179586,
@@ -229,6 +194,15 @@
     "class_type": "ETN_LoadImageBase64",
     "_meta": {
       "title": "Load Image (Base64)"
+    }
+  },
+  "55": {
+    "inputs": {
+      "ckpt_name": "flux1-dev-fp8.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
     }
   }
 }
