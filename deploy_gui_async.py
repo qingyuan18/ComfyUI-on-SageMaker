@@ -18,8 +18,11 @@ import matplotlib.pyplot as plt
 from sagemaker_ssh_helper.wrapper import SSHModelWrapper
 from sagemaker import get_execution_role,session
 from sagemaker import Model, image_uris, serializers, deserializers
+from sagemaker.pytorch import PyTorchModel
+from sagemaker.async_inference.async_inference_config import AsyncInferenceConfig
 import sagemaker
 import tempfile
+
 
 # 初始化sagemaker
 role = get_execution_role()
@@ -28,6 +31,8 @@ bucket = sage_session.default_bucket()
 aws_region = boto3.Session().region_name
 sts_client = boto3.client('sts')
 account_id = sts_client.get_caller_identity()['Account']
+s3_client = boto3.client('s3')
+s3_resource = boto3.resource('s3')
 print(f'account id:{account_id}')
 print(f'sagemaker sdk version: {sagemaker.__version__}\nrole:  {role}  \nbucket:  {bucket}')
 
@@ -153,7 +158,7 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
     # AWS ECR login
     os.system("aws ecr get-login-password --region "+aws_region+" | docker login --username AWS --password-stdin 763104351884.dkr.ecr."+aws_region+".amazonaws.com")
     # Build and push
-    os.system("bash ./build_and_push.sh ./docker/Dockerfile_deploy")
+    os.system("bash ./build_and_push_async.sh ./docker/Dockerfile_deploy")
     # Create dummy file and tar
     with open('dummy', 'w') as f:
         pass
@@ -171,7 +176,11 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
     env = models
     container=f"{account_id}.dkr.ecr.{aws_region}.amazonaws.com/comfyui-inference:latest"
 
-    model = Model(image_uri=container,
+    async_config = AsyncInferenceConfig(
+    output_path=f's3://sagemaker-{aws_region}-{account_id}/async-output',
+    )
+
+    model = PyTorchModel(image_uri=container,
               model_data=model_data,
               role=role,
               env=env,
@@ -190,7 +199,8 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
         model.deploy(initial_instance_count=1,
              instance_type=instance_type,
              endpoint_name=endpoint_name,
-             container_startup_health_check_timeout=2600
+             container_startup_health_check_timeout=2600,
+             async_inference_config=async_config,
             )
         deploy_output += f"{endpoint_name}部署成功!\n"
         #gr.Info(deploy_output)
@@ -228,7 +238,7 @@ def run_inference(endpoint_name):
     }
     gr.Info("任务已提交")
     result = predict_async(endpoint_name,payload)
-    gr.Info("结果文件:"+str(result['prediction']))
+    gr.Info("结果文件:"+str(result))
 
     # step4: 下载并处理 S3 图片
     s3_client = boto3.client('s3')
@@ -317,13 +327,14 @@ def get_bucket_and_key(s3uri):
 def get_result(output_location):
     try:
         bucket, key = get_bucket_and_key(output_location)
+        print("here2===",bucket,key)
         obj = s3_resource.Object(bucket, key)
         body = obj.get()['Body'].read().decode('utf-8')
         predictions = json.loads(body)
-        print(predictions['result'])
+        print("async result:",predictions)
         return predictions
     except Exception as e:
-        gr.Info("result is not completed, waiting...")
+        print("get result execption...",e)
 
 def wait_async_result(output_location,timeout=60):
     current_time=0
@@ -351,7 +362,7 @@ def predict_async(endpoint_name,payload):
         InputLocation=input_location
     )
     result =response.get("OutputLocation",'')
-    wait_async_result(result)
+    return wait_async_result(result)
 
 
 
