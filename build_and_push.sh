@@ -33,13 +33,18 @@ docker login --username AWS -p ${pwd} ${account}.dkr.ecr.${region}.amazonaws.com
 #git clone -b latest https://github.com/qingyuan18/ComfyUI.git
 #docker build -t ${algorithm_name}  ./ -f ./docker/dockerfile-latest
 
-
-git clone -b flux https://github.com/qingyuan18/ComfyUI.git
 dockerfile="./docker/dockerfile-flux"
-# 如果提供了参数，则使用该参数作为 Dockerfile 名称
-if [ $# -eq 1 ]; then
+# 如果提供了第一个参数，则使用该参数作为 Dockerfile 名称
+if [ $# -ge 1 ]; then
     dockerfile=$1
 fi
+# 如果提供了第二个参数，则使用该参数作为克隆的分支名
+if [ $# -ge 2 ]; then
+    branch=$2
+else
+    branch="flux"
+fi
+git clone -b $branch https://github.com/qingyuan18/ComfyUI.git
 # 构建 Docker 镜像
 docker build -t ${algorithm_name} ./ -f ./${dockerfile}
 #docker build -t ${algorithm_name}  ./ -f ./docker/dockerfile-flux
