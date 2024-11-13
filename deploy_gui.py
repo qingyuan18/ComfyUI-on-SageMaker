@@ -440,4 +440,4 @@ with gr.Blocks() as demo:
         save_btn.click(save_json, inputs=[json_text])
         run_btn.click(run_inference, inputs=[endpoint_dropdown], outputs=image_output)
         #demo.load(get_status, outputs=deploy_info_text, every=5)
-demo.launch()
+demo.launch(share=True)
