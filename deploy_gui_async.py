@@ -39,7 +39,52 @@ print(f'sagemaker sdk version: {sagemaker.__version__}\nrole:  {role}  \nbucket:
 
 # 初始化全局变量
 models = {"s3_bucket": bucket}
-node_urls = []
+node_urls = [
+"https://github.com/ltdrdata/ComfyUI-Manager",
+"https://github.com/ltdrdata/ComfyUI-Impact-Pack",
+"https://github.com/ltdrdata/ComfyUI-Inspire-Pack",
+"https://github.com/Stability-AI/ComfyUI-SAI_API",
+"https://github.com/BlenderNeko/ComfyUI_ADV_CLIP_emb",
+"https://github.com/Derfuu/Derfuu_ComfyUI_ModdedNodes",
+"https://github.com/WASasquatch/was-node-suite-comfyui",
+"https://github.com/WASasquatch/WAS_Extras",
+"https://github.com/EllangoK/ComfyUI-post-processing-nodes",
+"https://github.com/pythongosssss/ComfyUI-WD14-Tagger",
+"https://github.com/ssitu/ComfyUI_UltimateSDUpscale",
+"https://github.com/bmad4ever/comfyui_bmad_nodes",
+"https://github.com/SeargeDP/SeargeSDXL",
+"https://github.com/cubiq/ComfyUI_IPAdapter_plus",
+"https://github.com/cubiq/ComfyUI_InstantID",
+"https://github.com/cubiq/PuLID_ComfyUI",
+"https://github.com/sipherxyz/comfyui-art-venture",
+"https://github.com/evanspearman/ComfyMath",
+"https://github.com/jamesWalker55/comfyui-various",
+"https://github.com/bash-j/mikey_nodes",
+"https://github.com/wallish77/wlsh_nodes",
+"https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet",
+"https://github.com/rgthree/rgthree-comfy",
+"https://github.com/AIGODLIKE/AIGODLIKE-COMFYUI-TRANSLATION",
+"https://github.com/Lerc/canvas_tab",
+"https://github.com/ArtBot2023/CharacterFaceSwap",
+"https://github.com/mav-rik/facerestore_cf",
+"https://github.com/cubiq/ComfyUI_essentials",
+"https://github.com/chrisgoringe/cg-use-everywhere",
+"https://github.com/kijai/ComfyUI-SUPIR",
+"https://github.com/kijai/ComfyUI-Florence2",
+"https://github.com/storyicon/comfyui_segment_anything",
+"https://github.com/chflame163/ComfyUI_LayerStyle",
+"https://github.com/ZHO-ZHO-ZHO/ComfyUI-Text_Image-Composite",
+"https://github.com/yolain/ComfyUI-Easy-Use",
+"https://github.com/crystian/ComfyUI-Crystools",
+"https://github.com/huchenlei/ComfyUI-layerdiffuse",
+"https://github.com/if-ai/ComfyUI_IF_AI_tools",
+"https://github.com/lquesada/ComfyUI-Inpaint-CropAndStitch",
+"https://github.com/john-mnz/ComfyUI-Inspyrenet-Rembg",
+"https://github.com/XLabs-AI/x-flux-comfyui",
+"https://github.com/AlekPet/ComfyUI_Custom_Nodes_AlekPet",
+"https://github.com/pythongosssss/ComfyUI-Custom-Scripts",
+"https://github.com/jags111/efficiency-nodes-comfyui"
+]
 json_content = ""
 temp_file_path = None
 deploy_info = ""
@@ -51,6 +96,8 @@ model_types_values = ["MODEL_PATH","LORA_MODEL_PATH","CONTROLNET_MODEL_PATH","CL
 # 机型选项
 instance_types = ["ml.g5.2xlarge", "ml.g5.4xlarge","ml.g4dn.2xlarge"]
 
+# 模版选项
+branch_types = ["flux","dev","async"]
 
 ### gui utility functions
 def parse_json(file):
@@ -85,7 +132,7 @@ def save_json(content):
 # 清除模型
 def clear_models():
     global models
-    models = {}
+    models = {"s3_bucket": bucket}
     return gr.update(value="")
 
 # 清除 Nodes
@@ -124,7 +171,7 @@ def add_node(node_url):
     return gr.update(value=f"当前 Node URLs：\n{json.dumps(node_urls, indent=2, ensure_ascii=False)}")
 
 # 部署模型
-def deploy_model(instance_type, region, progress=gr.Progress()):
+def deploy_model(instance_type, region, branch_type, progress=gr.Progress()):
     print("here0====")
     global models, node_urls
     deploy_output = ""
@@ -158,7 +205,7 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
     # AWS ECR login
     os.system("aws ecr get-login-password --region "+aws_region+" | docker login --username AWS --password-stdin 763104351884.dkr.ecr."+aws_region+".amazonaws.com")
     # Build and push
-    os.system("bash ./build_and_push_async.sh ./docker/Dockerfile_deploy")
+    os.system("bash ./build_and_push_async.sh ./docker/Dockerfile_deploy "+branch_type)
     # Create dummy file and tar
     with open('dummy', 'w') as f:
         pass
@@ -175,7 +222,7 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
     ## step2: create sagemaker model config
     env = models
     container=f"{account_id}.dkr.ecr.{aws_region}.amazonaws.com/comfyui-inference:latest"
-
+    
     async_config = AsyncInferenceConfig(
     output_path=f's3://sagemaker-{aws_region}-{account_id}/async-output',
     )
@@ -184,7 +231,7 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
               model_data=model_data,
               role=role,
               env=env,
-              #dependencies=[SSHModelWrapper.dependency_dir()]
+              #dependencies=[SSHModelWrapper.dependency_dir()] 
               )
 
     deploy_output = f"开始部署模型\n实例类型: {instance_type}\n区域: {region}\n"
@@ -192,7 +239,7 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
     progress(0.4, desc=deploy_output)
 
     ## step3: start deployment
-    endpoint_name = f"comfyui-endpoint-{int(time.time())}"
+    endpoint_name = f"comfyui-endpoint-{int(time.time())}"  
     try:
         deploy_output = f"正在创建 SageMaker endpoint: {endpoint_name}\n"
         gr.Info(deploy_output)
@@ -206,13 +253,13 @@ def deploy_model(instance_type, region, progress=gr.Progress()):
         #gr.Info(deploy_output)
         progress(1, desc=deploy_output)
         print("here2====")
-        return
+        return 
     except Exception as e:
         print("here3====")
         print(e)
         deploy_output += f"部署过程中出现错误: {str(e)}\n"
         gr.Info(deploy_output)
-        return
+        return 
 
 
 
@@ -280,7 +327,7 @@ def get_inservice_sagemaker_endpoints(region):
 # 刷新 endpoints 列表
 def refresh_endpoints(region):
     endpoints = get_inservice_sagemaker_endpoints(region)
-    return gr.update(choices=endpoints)
+    return gr.update(choices=endpoints)  
 
 ##### sagemaker utility functions ######
 s3_client = boto3.client('s3')
@@ -310,13 +357,13 @@ def s3_object_exists(s3_path):
         base_name=os.path.basename(s3_path)
         _,ext_name=os.path.splitext(base_name)
         bucket,key=get_bucket_and_key(s3_path)
-
+        
         s3.head_object(Bucket=bucket, Key=key)
         return True
     except Exception as ex:
-        print("job is not completed, waiting...")
+        print("job is not completed, waiting...")   
         return False
-
+        
 def get_bucket_and_key(s3uri):
     pos = s3uri.find('/', 5)
     bucket = s3uri[5 : pos]
@@ -329,12 +376,12 @@ def get_result(output_location):
         bucket, key = get_bucket_and_key(output_location)
         print("here2===",bucket,key)
         obj = s3_resource.Object(bucket, key)
-        body = obj.get()['Body'].read().decode('utf-8')
+        body = obj.get()['Body'].read().decode('utf-8') 
         predictions = json.loads(body)
         print("async result:",predictions)
         return predictions
     except Exception as e:
-        print("get result execption...",e)
+        print("get result execption...",e)  
 
 def wait_async_result(output_location,timeout=60):
     current_time=0
@@ -421,7 +468,7 @@ def check_sendpoint_status(endpoint_name,timeout=600):
             break
 
 
-
+            
 
 
 # 创建 Gradio 界面
@@ -442,6 +489,7 @@ with gr.Blocks() as demo:
             clear_nodes_btn = gr.Button("清除 Nodes")
 
             instance_type = gr.Dropdown(choices=instance_types, label="机型", value="ml.g5.2xlarge")
+            branch_type = gr.Dropdown(choices=branch_types, label="部署分支", value="async")
             region = gr.Textbox(label="区域", value="us-west-2")
             deploy_btn = gr.Button("部署")
             deploy_progress = gr.Textbox("部署进度")
@@ -456,7 +504,7 @@ with gr.Blocks() as demo:
 
         ## listener
         add_node_btn.click(add_node, inputs=node_url, outputs=node_info)
-        deploy_btn.click(fn=deploy_model, inputs=[instance_type, region],outputs=deploy_progress)
+        deploy_btn.click(fn=deploy_model, inputs=[instance_type, region, branch_type],outputs=deploy_progress)
         model_type.change(update_visibility, inputs=[model_type], outputs=[comfy_dir, s3_path, model_path])
         add_model_btn.click(
             add_model,

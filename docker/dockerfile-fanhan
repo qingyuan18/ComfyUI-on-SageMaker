@@ -18,13 +18,13 @@ RUN pip install -r /opt/program/requirements.txt
 
 ####upgrade torch/torchversion/cuda121 relevant dependence
 #RUN pip install torch torchvision --upgrade --index-url https://download.pytorch.org/whl/cu121
+#RUN pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu124
 RUN pip install -U xformers
 RUN pip install scikit-image
 RUN pip install imageio_ffmpeg
 RUN pip install wget
 RUN pip install retry
 RUN pip install segment-anything
-RUN pip install bitsandbytes
 
 
 
@@ -37,12 +37,21 @@ RUN mv ./ae.safetensors /opt/program/models/vae/
 
 
 ###install relevant ComfyUI nodes
-{% for command in git_clone_commands %}
-{{ command }}
-{% endfor %}
+RUN git clone https://github.com/Acly/comfyui-tooling-nodes.git    /opt/program/custom_nodes/comfyui-tooling-nodes
+RUN git clone https://github.com/storyicon/comfyui_segment_anything.git /opt/program/custom_nodes/comfyui_segment_anything
+RUN git clone https://github.com/pythongosssss/ComfyUI-Custom-Scripts /opt/program/custom_nodes/ComfyUI-Custom-Scripts
+RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/program/custom_nodes/ComfyUI-Manager
+RUN git clone https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet.git /opt/program/custom_nodes/ComfyUI-Advanced-ControlNet
+RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git /opt/program/custom_nodes/comfyui_controlnet_aux
+RUN git clone https://github.com/XLabs-AI/x-flux-comfyui /opt/program/custom_nodes/x-flux-comfyui
+RUN git clone https://github.com/WASasquatch/was-node-suite-comfyui  /opt/program/custom_nodes/was-node-suite-comfyui
 RUN mkdir -p /opt/program/models/xlabs/ipadapters
 RUN mkdir -p /opt/program/models/xlabs/loras
 RUN mkdir -p /opt/program/models/xlabs/controlnets
+
+####install relevant http/socket client（for unicorn web server）
+RUN pip3 install websocket-client
+RUN pip3 install pydantic
 
 
 #### for fanhan 
@@ -65,13 +74,8 @@ RUN pip install opencv-python-headless==4.7.0.72
 RUN apt-get update && apt-get install libgl1
 
 
-####install relevant http/socket client（for unicorn web server）
-RUN pip3 install websocket-client
-RUN pip3 install pydantic
-
-
 #####start comfyui
-RUN chmod -R 777 /opt/program
+RUN chmod 755 /opt/program
 RUN chmod 755 /opt/program/serve
 WORKDIR /opt/program
 
