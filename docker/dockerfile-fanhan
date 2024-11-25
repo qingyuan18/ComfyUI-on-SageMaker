@@ -55,23 +55,12 @@ RUN pip3 install pydantic
 
 
 #### for fanhan 
-RUN pip install yapf
-RUN pip install addict
-RUN pip install piexif
-RUN pip install transparent_background
-RUN pip install deepdiff
-RUN pip install diffusers
-RUN pip install accelerate
-RUN pip install blend-modes
-RUN pip install omegaconf
-RUN pip install lpips
-RUN pip install facexlib
-RUN pip install insightface
-RUN pip install -U numba
-RUN pip install gray2color
-RUN pip install webcolors
-RUN pip install opencv-python-headless==4.7.0.72
-RUN apt-get update && apt-get install libgl1
+RUN pip install yapf piexif addict transparent_background deepdiff diffusers accelerate
+RUN pip install blend-modes omegaconf lpips facexlib insightface
+RUN pip install -U omegaconf lpips facexlib insightface numba gray2color webcolors
+RUN pip install opencv-python-headless==4.7.0.72 sagemaker_ssh_helper
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y libgl1
 
 
 #####start comfyui

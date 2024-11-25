@@ -85,6 +85,8 @@ node_urls = [
 "https://github.com/pythongosssss/ComfyUI-Custom-Scripts",
 "https://github.com/jags111/efficiency-nodes-comfyui"
 ]
+
+node_urls = []
 json_content = ""
 temp_file_path = None
 deploy_info = ""

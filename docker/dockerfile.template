@@ -45,26 +45,6 @@ RUN mkdir -p /opt/program/models/xlabs/loras
 RUN mkdir -p /opt/program/models/xlabs/controlnets
 
 
-#### for fanhan 
-RUN pip install yapf
-RUN pip install addict
-RUN pip install piexif
-RUN pip install transparent_background
-RUN pip install deepdiff
-RUN pip install diffusers
-RUN pip install accelerate
-RUN pip install blend-modes
-RUN pip install omegaconf
-RUN pip install lpips
-RUN pip install facexlib
-RUN pip install insightface
-RUN pip install -U numba
-RUN pip install gray2color
-RUN pip install webcolors
-RUN pip install opencv-python-headless==4.7.0.72
-RUN apt-get update && apt-get install libgl1
-
-
 ####install relevant http/socket client（for unicorn web server）
 RUN pip3 install websocket-client
 RUN pip3 install pydantic
