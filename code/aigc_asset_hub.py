@@ -39,7 +39,6 @@ print(f'sagemaker sdk version: {sagemaker.__version__}\nrole:  {role}  \nbucket:
 
 # 初始化全局变量
 models = {"s3_bucket": bucket}
-
 node_urls = [
 ]
 json_content = ""
@@ -427,52 +426,121 @@ def check_sendpoint_status(endpoint_name,timeout=600):
 
             
 
+def update_asset_sample_ui(asset_sample_choice):
+    if asset_sample_choice == "模特换装":
+        return gr.update(visible=True, interactive=True), gr.update(visible=True, interactive=True), gr.update(visible=False, interactive=True), gr.update(visible=True), gr.update(value="图像输入1为模特图，图像输入2为衣服图")
+    elif asset_sample_choice in ["图像修复", "图像去水印"]:
+        return gr.update(visible=True, interactive=True), gr.update(visible=False, interactive=True), gr.update(visible=False, interactive=True), gr.update(visible=True), gr.update(value="输入需要处理的原始图像")
+    elif asset_sample_choice == "图像风格转换":
+        return gr.update(visible=True, interactive=True), gr.update(visible=False, interactive=True), gr.update(visible=True, interactive=True), gr.update(visible=True), gr.update(value="图像输入1为原始图像，文本输入为风格描述")
+    else:
+        return gr.update(visible=False, interactive=True), gr.update(visible=False, interactive=True), gr.update(visible=False, interactive=True), gr.update(visible=True), gr.update(value="")
+
+
+def update_lora_ui(lora_choice):
+    return gr.update(visible=True, interactive=True), gr.update(visible=True)
+
+
+def update_lora_ui(lora_choice):
+    return gr.update(visible=True), gr.update(visible=True)
 
 # 创建 Gradio 界面
 with gr.Blocks() as demo:
-    with gr.Row():
-        with gr.Column():
-            model_type = gr.Dropdown(choices=model_types, label="模型类型",value=model_types[4])
-            model_path = gr.Textbox(label="模型路径", value="s3://sagemaker-us-west-2-687912291502/models/clip")
-            comfy_dir = gr.Textbox(label="ComfyUI 模型目录", visible=False)
-            s3_path = gr.Textbox(label="S3 模型路径", visible=False)
-            model_info = gr.Textbox(label="模型信息", interactive=False)
-            add_model_btn = gr.Button("添加模型")
-            clear_models_btn = gr.Button("清除模型")
+    with gr.Tabs() as main_tabs:
+        with gr.TabItem("推理部署"):
+            with gr.Row():
+                with gr.Column():
+                    model_type = gr.Dropdown(choices=model_types, label="模型类型",value=model_types[4])
+                    model_path = gr.Textbox(label="模型路径", value="s3://sagemaker-us-west-2-687912291502/models/clip")
+                    comfy_dir = gr.Textbox(label="ComfyUI 模型目录", visible=False)
+                    s3_path = gr.Textbox(label="S3 模型路径", visible=False)
+                    model_info = gr.Textbox(label="模型信息", interactive=False)
+                    add_model_btn = gr.Button("添加模型")
+                    clear_models_btn = gr.Button("清除模型")
 
-            node_url = gr.Textbox(label="Node Git URL", value="https://github.com/Acly/comfyui-tooling-nodes.git")
-            node_info = gr.Textbox(label="Node URL 信息", interactive=False)
-            add_node_btn = gr.Button("添加 Customer Nodes")
-            clear_nodes_btn = gr.Button("清除 Nodes")
+                    node_url = gr.Textbox(label="Node Git URL", value="https://github.com/Acly/comfyui-tooling-nodes.git")
+                    node_info = gr.Textbox(label="Node URL 信息", interactive=False)
+                    add_node_btn = gr.Button("添加 Customer Nodes")
+                    clear_nodes_btn = gr.Button("清除 Nodes")
 
-            instance_type = gr.Dropdown(choices=instance_types, label="机型", value="ml.g5.2xlarge")
-            branch_type = gr.Dropdown(choices=branch_types, label="部署分支", value="async")
-            region = gr.Textbox(label="区域", value="us-west-2")
-            deploy_btn = gr.Button("部署")
-            deploy_progress = gr.Textbox("部署进度")
-        with gr.Column():
-            endpoint_dropdown = gr.Dropdown(label="推理端点", choices=get_inservice_sagemaker_endpoints(region.value))
-            refresh_btn = gr.Button("刷新")
-            json_file = gr.File(label="上传 JSON 文件")
-            json_text = gr.Code(label="JSON 内容", language="json", lines=20)
-            save_btn = gr.Button("保存")
-            run_btn = gr.Button("运行")
-            image_output = gr.Gallery(label="生成的图像")
+                    instance_type = gr.Dropdown(choices=instance_types, label="机型", value="ml.g5.2xlarge")
+                    branch_type = gr.Dropdown(choices=branch_types, label="部署分支", value="async")
+                    region = gr.Textbox(label="区域", value="us-west-2")
+                    deploy_btn = gr.Button("部署")
+                    deploy_progress = gr.Textbox("部署进度")
+                with gr.Column():
+                    endpoint_dropdown = gr.Dropdown(label="推理端点", choices=get_inservice_sagemaker_endpoints(region.value))
+                    refresh_btn = gr.Button("刷新")
+                    json_file = gr.File(label="上传 JSON 文件")
+                    json_text = gr.Code(label="JSON 内容", language="json", lines=20)
+                    save_btn = gr.Button("保存")
+                    run_btn = gr.Button("运行")
+                    image_output = gr.Gallery(label="生成的图像")
 
-        ## listener
-        add_node_btn.click(add_node, inputs=node_url, outputs=node_info)
-        deploy_btn.click(fn=deploy_model, inputs=[instance_type, region, branch_type],outputs=deploy_progress)
-        model_type.change(update_visibility, inputs=[model_type], outputs=[comfy_dir, s3_path, model_path])
-        add_model_btn.click(
-            add_model,
-            inputs=[model_type, model_path, comfy_dir, s3_path],
-            outputs=model_info
-        )
-        clear_models_btn.click(clear_models, outputs=model_info)
-        clear_nodes_btn.click(clear_nodes, outputs=node_info)
-        refresh_btn.click(refresh_endpoints, inputs=[region], outputs=[endpoint_dropdown])
-        json_file.upload(parse_json, inputs=[json_file], outputs=[json_text])
-        save_btn.click(save_json, inputs=[json_text])
-        run_btn.click(run_inference, inputs=[endpoint_dropdown], outputs=image_output)
-        #demo.load(get_status, outputs=deploy_info_text, every=5) 
+            ## listener
+            add_node_btn.click(add_node, inputs=node_url, outputs=node_info)
+            deploy_btn.click(fn=deploy_model, inputs=[instance_type, region, branch_type],outputs=deploy_progress)
+            model_type.change(update_visibility, inputs=[model_type], outputs=[comfy_dir, s3_path, model_path])
+            add_model_btn.click(
+                add_model,
+                inputs=[model_type, model_path, comfy_dir, s3_path],
+                outputs=model_info
+            )
+            clear_models_btn.click(clear_models, outputs=model_info)
+            clear_nodes_btn.click(clear_nodes, outputs=node_info)
+            refresh_btn.click(refresh_endpoints, inputs=[region], outputs=[endpoint_dropdown])
+            json_file.upload(parse_json, inputs=[json_file], outputs=[json_text])
+            save_btn.click(save_json, inputs=[json_text])
+            run_btn.click(run_inference, inputs=[endpoint_dropdown], outputs=image_output)
+            #demo.load(get_status, outputs=deploy_info_text, every=5)
+
+        with gr.TabItem("asset sample"):
+            asset_sample_dropdown = gr.Dropdown(
+                choices=[
+                    "模特换装",
+                    "图像修复",
+                    "图像去水印",
+                    "电商主图生成",
+                    "图像风格转换",
+                    "视频风格转换",
+                    "视频编辑",
+                    "捏捏乐特效视频",
+                    "刀切乐特效视频",
+                    "气功波特效视频",
+                    "图像换脸",
+                    "音色克隆",
+                    "文生音乐"
+                ],
+                label="选择样本"
+            )
+            hint_text = gr.Textbox(label="温馨提示", interactive=False)
+            image1 = gr.Image(label="图像输入1", visible=False, interactive=True)
+            image2 = gr.Image(label="图像输入2", visible=False,interactive=True)
+            text_input = gr.Textbox(label="文本输入", visible=False,interactive=True)
+            submit_btn = gr.Button("提交", visible=False)
+            
+
+            asset_sample_dropdown.change(
+                update_asset_sample_ui,
+                inputs=asset_sample_dropdown,
+                outputs=[image1, image2, text_input, submit_btn,hint_text]
+            )
+
+        with gr.TabItem("lora"):
+            lora_dropdown = gr.Dropdown(
+                choices=[
+                    "图像lora训练",
+                    "视频lora训练"
+                ],
+                label="选择lora训练类型"
+            )
+            lora_text = gr.Textbox(label="lora 信息", visible=False)
+            submit_btn_lora = gr.Button("提交", visible=False)
+
+            lora_dropdown.change(
+                update_lora_ui,
+                inputs=lora_dropdown,
+                outputs=[lora_text, submit_btn_lora]
+            )
+
 demo.launch(share=True)
