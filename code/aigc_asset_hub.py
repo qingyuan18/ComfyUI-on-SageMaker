@@ -14,20 +14,17 @@ import io
 import traceback
 from PIL import Image
 import json
-import matplotlib.pyplot as plt
-from sagemaker_ssh_helper.wrapper import SSHModelWrapper
 from sagemaker import get_execution_role,session
 from sagemaker import Model, image_uris, serializers, deserializers
 from sagemaker.pytorch import PyTorchModel
 from sagemaker.async_inference.async_inference_config import AsyncInferenceConfig
 import sagemaker
 import tempfile
-
+from aigc_hub_util import *
 
 # 初始化sagemaker
 role = get_execution_role()
-sage_session = session.Session()
-bucket = sage_session.default_bucket()
+bucket = "sagemaker-us-west-2-687912291502"
 aws_region = boto3.Session().region_name
 sts_client = boto3.client('sts')
 account_id = sts_client.get_caller_identity()['Account']
@@ -287,22 +284,6 @@ def refresh_endpoints(region):
 
 ##### sagemaker utility functions ######
 s3_client = boto3.client('s3')
-def show_local_image(image_path):
-    try:
-        # 使用PIL库打开图像
-        img = Image.open(image_path)
-        # 使用matplotlib显示图像
-        plt.figure(figsize=(10, 8))
-        plt.imshow(img)
-        plt.axis('off')  # 不显示坐标轴
-        plt.title('Local Image')
-        plt.show()
-    except FileNotFoundError:
-        print(f"Error: The file '{image_path}' was not found.")
-    except IOError:
-        print(f"Error: Unable to open the image file '{image_path}'.")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
 
 def s3_object_exists(s3_path):
     """
@@ -424,17 +405,30 @@ def check_sendpoint_status(endpoint_name,timeout=600):
             break
 
 
-            
-
-def update_asset_sample_ui(asset_sample_choice):
-    if asset_sample_choice == "模特换装":
-        return gr.update(visible=True, interactive=True), gr.update(visible=True, interactive=True), gr.update(visible=False, interactive=True), gr.update(visible=True), gr.update(value="图像输入1为模特图，图像输入2为衣服图")
-    elif asset_sample_choice in ["图像修复", "图像去水印"]:
-        return gr.update(visible=True, interactive=True), gr.update(visible=False, interactive=True), gr.update(visible=False, interactive=True), gr.update(visible=True), gr.update(value="输入需要处理的原始图像")
-    elif asset_sample_choice == "图像风格转换":
-        return gr.update(visible=True, interactive=True), gr.update(visible=False, interactive=True), gr.update(visible=True, interactive=True), gr.update(visible=True), gr.update(value="图像输入1为原始图像，文本输入为风格描述")
+def update_asset_sample_ui(selected_sample):
+    # 假设这个函数根据选择的样本更新UI组件的可见性
+    # 这里只是一个示例，你需要根据实际需求实现这个函数
+    if selected_sample in ["模特换装", "图像修复", "图像去水印", "图像换脸"]:
+        return (gr.update(visible=True), gr.update(visible=False), gr.update(visible=False),
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                gr.update(visible=True), "请上传图像1")
+    elif selected_sample in ["吉普力风格转换", "图像风格转换"]:
+        return (gr.update(visible=True), gr.update(visible=True), gr.update(visible=False),
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                gr.update(visible=True), "请上传图像1和图像2")
+    elif selected_sample in ["视频风格转换", "长一致性视频（10s）"]:
+        return (gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=True),
+                gr.update(visible=True), "请上传视频")
+    elif selected_sample in ["音色克隆"]:
+        return (gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                gr.update(visible=True), gr.update(visible=True), gr.update(visible=False),
+                gr.update(visible=True), "请上传音频")
     else:
-        return gr.update(visible=False, interactive=True), gr.update(visible=False, interactive=True), gr.update(visible=False, interactive=True), gr.update(visible=True), gr.update(value="")
+        return (gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                gr.update(visible=True), gr.update(visible=True), gr.update(visible=False),
+                gr.update(visible=True), "请输入文本")            
+
 
 
 def update_lora_ui(lora_choice):
@@ -498,12 +492,14 @@ with gr.Blocks() as demo:
             asset_sample_dropdown = gr.Dropdown(
                 choices=[
                     "模特换装",
+                    "吉普力风格转换",
                     "图像修复",
                     "图像去水印",
                     "电商主图生成",
-                    "图像风格转换",
                     "视频风格转换",
-                    "视频编辑",
+                    "多图参考视频编辑",
+                    "长一致性视频（10s）",
+                    "数字人口型驱动",
                     "捏捏乐特效视频",
                     "刀切乐特效视频",
                     "气功波特效视频",
@@ -515,16 +511,25 @@ with gr.Blocks() as demo:
             )
             hint_text = gr.Textbox(label="温馨提示", interactive=False)
             image1 = gr.Image(label="图像输入1", visible=False, interactive=True)
-            image2 = gr.Image(label="图像输入2", visible=False,interactive=True)
-            text_input = gr.Textbox(label="文本输入", visible=False,interactive=True)
+            image2 = gr.Image(label="图像输入2", visible=False, interactive=True)
+            image3 = gr.Image(label="图像输入3", visible=False, interactive=True)
+            text_input1 = gr.Textbox(label="文本输入1", visible=False, interactive=True)
+            text_input2 = gr.Textbox(label="文本输入2", visible=False, interactive=True)
+            audio_input = gr.Audio(label="音频输入", visible=False, interactive=True)
+            video_input = gr.Video(label="视频输入", visible=False, interactive=True)
             submit_btn = gr.Button("提交", visible=False)
+            assets_image_output = gr.Gallery(label="生成的图像")
+            assets_video_output = gr.Video(label="生成的视频")
             
-
             asset_sample_dropdown.change(
                 update_asset_sample_ui,
                 inputs=asset_sample_dropdown,
-                outputs=[image1, image2, text_input, submit_btn,hint_text]
+                outputs=[image1, image2, image3, text_input1, text_input2, audio_input, video_input, hint_text]
             )
+            
+            submit_btn.click(run_assets_inference, 
+                     inputs=[asset_sample_dropdown, image1, image2, image3, text_input1, text_input2, audio_input, video_input], 
+                     outputs=[assets_image_output, assets_video_output])
 
         with gr.TabItem("lora"):
             lora_dropdown = gr.Dropdown(
