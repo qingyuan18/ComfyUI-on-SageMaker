@@ -54,7 +54,7 @@ model_types_values = ["MODEL_PATH","LORA_MODEL_PATH","CONTROLNET_MODEL_PATH","CL
 instance_types = ["ml.g5.2xlarge", "ml.g5.4xlarge","ml.g4dn.2xlarge","ml.g6e.xlarge"]
 
 # 模版选项
-branch_types = ["flux","dev","async"]
+branch_types = ["flux","master","async"]
 
 ### gui utility functions
 def parse_json(file):
