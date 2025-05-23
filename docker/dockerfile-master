@@ -37,6 +37,7 @@ RUN mv ./vae*.safetensors /opt/program/models/vae/
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/program/custom_nodes/ComfyUI-Manager
 RUN git clone https://github.com/qingyuan18/comfyui-llm-node-for-amazon-bedrock.git  /opt/program/custom_nodes/comfyui-llm-node-for-amazon-bedrock
 RUN git clone -b latest https://github.com/qingyuan18/ComfyUI_LayerStyle.git  /opt/program/custom_nodes/ComfyUI_LayerStyle
+RUN git clone https://github.com/chflame163/ComfyUI_LayerStyle_Advance.git /opt/program/custom_nodes/ComfyUI_LayerStyle_Advance
 RUN git clone https://github.com/Acly/comfyui-tooling-nodes.git    /opt/program/custom_nodes/comfyui-tooling-nodes
 
 
