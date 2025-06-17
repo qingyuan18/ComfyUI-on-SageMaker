@@ -46,7 +46,17 @@ else
     branch="flux"
 fi
 git clone -b $branch https://github.com/qingyuan18/ComfyUI.git
-docker build -t ${algorithm_name} ./ -f ${dockerfile}
+
+# Check if BLACK_FOREST_KEY environment variable is set
+if [ -z "$BLACK_FOREST_KEY" ]; then
+    echo "Warning: BLACK_FOREST_KEY environment variable is not set"
+    echo "Please set it before running this script: export BLACK_FOREST_KEY='your_api_key_here'"
+    echo "Building without BLACK_FOREST_KEY..."
+    docker build -t ${algorithm_name} ./ -f ${dockerfile}
+else
+    echo "Building with BLACK_FOREST_KEY..."
+    docker build --build-arg BLACK_FOREST_KEY="$BLACK_FOREST_KEY" -t ${algorithm_name} ./ -f ${dockerfile}
+fi
 #docker build -t ${algorithm_name}  ./ -f ./docker/dockerfile-flux
 
 docker tag ${algorithm_name} ${fullname}

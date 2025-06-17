@@ -1,4 +1,9 @@
 FROM nvcr.io/nvidia/pytorch:23.05-py3
+
+# Define build argument for Black Forest Labs API key
+ARG BLACK_FOREST_KEY
+ENV BLACK_FOREST_KEY=${BLACK_FOREST_KEY}
+
 RUN mkdir -p /opt/program
 RUN chmod 777 /opt/program
 #FROM public.ecr.aws/o7x6j3x6/sd-dreambooth-finetuning-v2
@@ -38,6 +43,25 @@ RUN git clone https://github.com/qingyuan18/comfyui-llm-node-for-amazon-bedrock.
 RUN git clone -b latest https://github.com/qingyuan18/ComfyUI_LayerStyle.git  /opt/program/custom_nodes/ComfyUI_LayerStyle
 RUN git clone https://github.com/chflame163/ComfyUI_LayerStyle_Advance.git /opt/program/custom_nodes/ComfyUI_LayerStyle_Advance
 RUN git clone https://github.com/Acly/comfyui-tooling-nodes.git    /opt/program/custom_nodes/comfyui-tooling-nodes
+RUN git clone https://github.com/ShmuelRonen/FluxKontextCreator.git /opt/program/custom_nodes/FluxKontextCreator
+
+# Create config.ini for FluxKontextCreator
+RUN echo "[API]" > /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "# Your Black Forest Labs API key" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "X_KEY=${BLACK_FOREST_KEY}" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "# API endpoint (use api.bfl.ai, not api.bfl.ml)" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "BASE_URL=https://api.bfl.ai" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "[SETTINGS]" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "# Default timeout for API requests (seconds)" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "TIMEOUT=60" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "# Default safety tolerance (0-6)" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "SAFETY_TOLERANCE=4" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "# Default output format (png/jpeg)" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "OUTPUT_FORMAT=png" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini
 
 
 
