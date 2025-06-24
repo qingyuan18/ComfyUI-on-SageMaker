@@ -1,0 +1,67 @@
+{
+  "84": {
+    "inputs": {
+      "image": "model_image.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "85": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "99",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "90": {
+    "inputs": {
+      "image": "model01.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "99": {
+    "inputs": {
+      "edit_instruction": "write red color \"girl\" logo on the t-shirt ,remain others the same",
+      "model": "flux-kontext-pro",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "safety_tolerance": 4,
+      "seed": 483172915,
+      "keep_original_on_fail": true,
+      "speak_and_recognation": {
+        "__value__": [
+          false,
+          true
+        ]
+      },
+      "input_image": [
+        "103",
+        0
+      ]
+    },
+    "class_type": "FluxKontextCreator",
+    "_meta": {
+      "title": "🎨 Flux Kontext Creator"
+    }
+  },
+  "103": {
+    "inputs": {
+      "image": ""
+    },
+    "class_type": "ETN_LoadImageBase64",
+    "_meta": {
+      "title": "Load Image (Base64)"
+    }
+  }
+}

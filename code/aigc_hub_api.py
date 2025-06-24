@@ -70,28 +70,15 @@ def run_flux_kontext_workflow(user_prompt, input_image_base64):
     with open(workflow_path) as f:
         prompt_text = json.load(f)
 
-    # 设置输入图像和提示词
-    # 对于 LoadImage 节点，设置 base64 图像数据
-    prompt_text['84']['inputs']['image'] = input_image_base64
+    # 设置输入图像到 ETN_LoadImageBase64 节点 (103号节点)
+    prompt_text['103']['inputs']['image'] = input_image_base64
 
-    # 对于 FluxKontextCreator 节点，通过 widgets_values 设置参数
-    # widgets_values 格式: [prompt, model, aspect_ratio, output_format, steps, seed, randomize_seed, ...]
-    if 'widgets_values' not in prompt_text['99']:
-        prompt_text['99']['widgets_values'] = [
-            user_prompt,           # prompt
-            "flux-kontext-pro",    # model
-            "1:1",                 # aspect_ratio
-            "png",                 # output_format
-            4,                     # steps
-            random.randint(0, 99999999998),  # seed
-            "randomize",           # randomize_seed
-            True,                  # additional parameter
-            [False, True]          # additional parameters array
-        ]
-    else:
-        # 如果已存在 widgets_values，只更新必要的参数
-        prompt_text['99']['widgets_values'][0] = user_prompt
-        prompt_text['99']['widgets_values'][5] = random.randint(0, 99999999998)
+    # 设置 FluxKontextCreator 节点 (99号节点) 的参数
+    # 根据 flux_kontext_workflow.json 的结构，99号节点使用 inputs 而不是 widgets_values
+    prompt_text['99']['inputs']['edit_instruction'] = user_prompt
+    prompt_text['99']['inputs']['model'] = "flux-kontext-pro"
+    prompt_text['99']['inputs']['seed'] = random.randint(0, 99999999998)
+
 
     prompt_id=queue_prompt(prompt_text)['prompt_id']
     logger.info("prompt_id:"+prompt_id)
