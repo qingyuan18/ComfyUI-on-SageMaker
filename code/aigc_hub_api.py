@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException, Header
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 import uuid
-from .aigc_hub_util import *
+from aigc_hub_util import *
 
 app = FastAPI(title="ComfyUI Wapper Service")
 

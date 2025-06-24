@@ -35,12 +35,22 @@ config = Config(
        connect_timeout=1000,
     read_timeout=1000,
 )
-aws_region_s3 = "us-east-1"
-server_address = "ec2-35-164-90-149.us-west-2.compute.amazonaws.com:8188"
-BUCKET = "s3://sagemaker-us-east-1-687912291502/video/output/"
-RESULT_QR_BUCKET = "sagemaker-us-east-1-687912291502"
-session = boto3.session.Session(region_name='us-east-1')
-bedrock_runtime = session.client(service_name = 'bedrock-runtime', 
+
+# Read configuration from environment variables with fallback defaults
+aws_region_s3 = os.environ.get("AWS_REGION_S3", "us-east-1")
+server_address = os.environ.get("SERVER_ADDRESS", "ec2-35-164-90-149.us-west-2.compute.amazonaws.com:8188")
+BUCKET = os.environ.get("BUCKET", "s3://sagemaker-us-east-1-687912291502/video/output/")
+RESULT_QR_BUCKET = os.environ.get("RESULT_QR_BUCKET", "sagemaker-us-east-1-687912291502")
+
+# Log the configuration values being used
+logger.info(f"Configuration loaded:")
+logger.info(f"  AWS_REGION_S3: {aws_region_s3}")
+logger.info(f"  SERVER_ADDRESS: {server_address}")
+logger.info(f"  BUCKET: {BUCKET}")
+logger.info(f"  RESULT_QR_BUCKET: {RESULT_QR_BUCKET}")
+
+session = boto3.session.Session(region_name=aws_region_s3)
+bedrock_runtime = session.client(service_name = 'bedrock-runtime',
                                  config=config)
 
 #prompt_json_file="./ltxv_image_to_video.json"
