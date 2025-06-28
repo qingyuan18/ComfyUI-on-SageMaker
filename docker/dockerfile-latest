@@ -32,8 +32,8 @@ RUN pip install transparent_background
 #RUN apt install net-tools
 
 ###download relevant models
-RUN wget https://huggingface.co/mmmoof1/vae-ft-mse-840000-ema-pruned/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors
-RUN mv ./vae*.safetensors /opt/program/models/vae/
+RUN wget https://huggingface.co/modelzpalace/ae.safetensors/resolve/main/ae.safetensors
+RUN mv ./ae.safetensors /opt/program/models/vae/
 RUN wget https://huggingface.co/openai/clip-vit-large-patch14/resolve/main/model.safetensors
 RUN mv ./model.safetensors /opt/program/models/text_encoders/clip_l.safetensors
 RUN wget https://huggingface.co/fmoraes2k/t5xxl_fp8_e4m3fn.safetensors/resolve/main/t5xxl_fp8_e4m3fn.safetensors
