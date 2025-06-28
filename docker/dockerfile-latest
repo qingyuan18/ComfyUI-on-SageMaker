@@ -6,7 +6,9 @@ ENV BLACK_FOREST_KEY=${BLACK_FOREST_KEY}
 
 RUN mkdir -p /opt/program
 RUN mkdir -p /opt/program/models/text_encoders/
-RUN chmod 777 /opt/program
+RUN mkdir -p /opt/program/models/diffusion_models/
+RUN mkdir -p /opt/program/models/vae/
+RUN chmod -R 777 /opt/program
 #FROM public.ecr.aws/o7x6j3x6/sd-dreambooth-finetuning-v2
 
 

@@ -5,12 +5,6 @@
         "189",
         0
       ],
-      "speak_and_recognation": {
-        "__value__": [
-          false,
-          true
-        ]
-      },
       "clip": [
         "38",
         0
@@ -39,7 +33,7 @@
   },
   "31": {
     "inputs": {
-      "seed": 239461679174280,
+      "seed": 280430857384742,
       "steps": 20,
       "cfg": 1,
       "sampler_name": "euler",
@@ -171,7 +165,7 @@
       "spacing_width": 0,
       "spacing_color": "white",
       "image1": [
-        "198",
+        "197",
         0
       ]
     },
@@ -205,13 +199,7 @@
       "text": [
         "196",
         0
-      ],
-      "speak_and_recognation": {
-        "__value__": [
-          false,
-          true
-        ]
-      }
+      ]
     },
     "class_type": "GoogleTranslateTextNode",
     "_meta": {
@@ -220,7 +208,7 @@
   },
   "190": {
     "inputs": {
-      "text_0": "write “GenAI SSA” on the t-shirt of the girl,keeping the same engraved chrome style, lighting, perspective,\nand position on the hardware",
+      "text_0": "Change image to the man and women to hug  together , while maintaining the same facial features, hairstyle, and expression",
       "text": [
         "189",
         0
@@ -266,20 +254,14 @@
   },
   "196": {
     "inputs": {
-      "text": "write “GenAI SSA” on the t-shirt of the girl,keeping the same engraved chrome style, lighting, perspective, \nand position on the hardware",
-      "speak_and_recognation": {
-        "__value__": [
-          false,
-          true
-        ]
-      }
+      "text": "write “GenAI SSA” on the t-shirt of the girl,keeping the same engraved chrome style, lighting, perspective, \nand position on the hardware"
     },
     "class_type": "Text Multiline",
     "_meta": {
       "title": "Text Multiline"
     }
   },
-  "198": {
+  "197": {
     "inputs": {
       "image": ""
     },
