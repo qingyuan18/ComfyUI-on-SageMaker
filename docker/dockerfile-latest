@@ -5,6 +5,7 @@ ARG BLACK_FOREST_KEY
 ENV BLACK_FOREST_KEY=${BLACK_FOREST_KEY}
 
 RUN mkdir -p /opt/program
+RUN mkdir -p /opt/program/models/text_encoders/
 RUN chmod 777 /opt/program
 #FROM public.ecr.aws/o7x6j3x6/sd-dreambooth-finetuning-v2
 
@@ -34,12 +35,12 @@ RUN pip install transparent_background
 ###download relevant models
 RUN wget https://huggingface.co/modelzpalace/ae.safetensors/resolve/main/ae.safetensors
 RUN mv ./ae.safetensors /opt/program/models/vae/
-RUN wget https://huggingface.co/openai/clip-vit-large-patch14/resolve/main/model.safetensors
-RUN mv ./model.safetensors /opt/program/models/text_encoders/clip_l.safetensors
+RUN wget https://huggingface.co/openai/clip-vit-large-patch14/resolve/main/model.safetensors -O clip_l.safetensors
+RUN mv ./clip_l.safetensors /opt/program/models/text_encoders/clip_l.safetensors
 RUN wget https://huggingface.co/fmoraes2k/t5xxl_fp8_e4m3fn.safetensors/resolve/main/t5xxl_fp8_e4m3fn.safetensors
-RUN mv ./t5xxl_fp8_e4m3fn.safetensors /opt/program/models/text_encoders/t5xxl_fp8_e4m3fn.safetensors
+RUN mv ./t5xxl_fp8_e4m3fn.safetensors /opt/program/models/text_encoders/
 RUN wget https://huggingface.co/Comfy-Org/flux1-kontext-dev_ComfyUI/resolve/main/split_files/diffusion_models/flux1-dev-kontext_fp8_scaled.safetensors
-RUN mv ./flux1-dev-kontext_fp8_scaled.safetensors /opt/program/models/diffusion_models/flux1-dev-kontext_fp8_scaled.safetensors
+RUN mv ./flux1-dev-kontext_fp8_scaled.safetensors /opt/program/models/diffusion_models/
 
 
 ###install relevant ComfyUI nodes
