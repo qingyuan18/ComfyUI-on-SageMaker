@@ -2,7 +2,7 @@
   "6": {
     "inputs": {
       "text": [
-        "189",
+        "196",
         0
       ],
       "clip": [
@@ -190,27 +190,11 @@
       "title": "ReferenceLatent"
     }
   },
-  "189": {
-    "inputs": {
-      "from_translate": "auto",
-      "to_translate": "en",
-      "manual_translate": false,
-      "Manual Trasnlate": "Manual Trasnlate",
-      "text": [
-        "196",
-        0
-      ]
-    },
-    "class_type": "GoogleTranslateTextNode",
-    "_meta": {
-      "title": "Google Translate Text Node"
-    }
-  },
   "190": {
     "inputs": {
       "text_0": "Change image to the man and women to hug  together , while maintaining the same facial features, hairstyle, and expression",
       "text": [
-        "189",
+        "196",
         0
       ]
     },

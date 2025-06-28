@@ -1,12 +1,12 @@
 FROM nvcr.io/nvidia/pytorch:23.05-py3
 ARG BLACK_FOREST_KEY
 ENV BLACK_FOREST_KEY=${BLACK_FOREST_KEY}
+
 RUN mkdir -p /opt/program
 RUN mkdir -p /opt/program/models/text_encoders/
 RUN mkdir -p /opt/program/models/diffusion_models/
 RUN mkdir -p /opt/program/models/vae/
 RUN chmod -R 777 /opt/program
-
 
 RUN pip install --no-cache-dir fastapi uvicorn sagemaker
 RUN pip install sagemaker-ssh-helper
@@ -30,6 +30,7 @@ RUN pip install retry
 RUN pip install segment-anything
 RUN pip install bitsandbytes
 
+
 ###download relevant models
 RUN wget https://huggingface.co/modelzpalace/ae.safetensors/resolve/main/ae.safetensors
 RUN mv ./ae.safetensors /opt/program/models/vae/
@@ -43,6 +44,7 @@ RUN mv ./flux1-dev-kontext_fp8_scaled.safetensors /opt/program/models/diffusion_
 
 ###install relevant ComfyUI nodes
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/program/custom_nodes/ComfyUI-Manager
+RUN git clone https://github.com/WASasquatch/was-node-suite-comfyui /opt/program/custom_nodes/was-node-suite-comfyui
 RUN git clone https://github.com/qingyuan18/comfyui-llm-node-for-amazon-bedrock.git  /opt/program/custom_nodes/comfyui-llm-node-for-amazon-bedrock
 RUN git clone -b latest https://github.com/qingyuan18/ComfyUI_LayerStyle.git  /opt/program/custom_nodes/ComfyUI_LayerStyle
 RUN git clone https://github.com/chflame163/ComfyUI_LayerStyle_Advance.git /opt/program/custom_nodes/ComfyUI_LayerStyle_Advance
@@ -77,10 +79,6 @@ RUN mkdir -p /opt/program/models/xlabs/ipadapters
 RUN mkdir -p /opt/program/models/xlabs/loras
 RUN mkdir -p /opt/program/models/xlabs/controlnets
 
-
-####install paddle ocr relavant module
-RUN pip install paddlepaddle-gpu==2.6.2
-RUN pip install paddleocr==2.10.0
 
 
 ####install relevant http/socket client（for unicorn web server）

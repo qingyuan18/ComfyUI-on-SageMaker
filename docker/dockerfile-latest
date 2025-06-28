@@ -47,6 +47,7 @@ RUN mv ./flux1-dev-kontext_fp8_scaled.safetensors /opt/program/models/diffusion_
 
 ###install relevant ComfyUI nodes
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/program/custom_nodes/ComfyUI-Manager
+RUN git clone https://github.com/WASasquatch/was-node-suite-comfyui /opt/program/custom_nodes/was-node-suite-comfyui
 RUN git clone https://github.com/qingyuan18/comfyui-llm-node-for-amazon-bedrock.git  /opt/program/custom_nodes/comfyui-llm-node-for-amazon-bedrock
 RUN git clone -b latest https://github.com/qingyuan18/ComfyUI_LayerStyle.git  /opt/program/custom_nodes/ComfyUI_LayerStyle
 RUN git clone https://github.com/chflame163/ComfyUI_LayerStyle_Advance.git /opt/program/custom_nodes/ComfyUI_LayerStyle_Advance
