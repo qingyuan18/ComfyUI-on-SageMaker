@@ -51,10 +51,10 @@ model_types = ["基座模型", "lora模型", "controlnet模型", "clip vision模
 model_types_values = ["MODEL_PATH","LORA_MODEL_PATH","CONTROLNET_MODEL_PATH","CLIP_VIT_MODEL_PATH","CLIP_MODEL_PATH","FLUX_LORA_MODEL_PATH","FLUX_IPADAPTER_MODEL_PATH","OTHER_MODEL_PATHS"]
 
 # 机型选项
-instance_types = ["ml.g5.2xlarge", "ml.g5.4xlarge","ml.g4dn.2xlarge","ml.g6e.xlarge"]
+instance_types = ["ml.g5.2xlarge", "ml.g5.4xlarge","ml.g4dn.2xlarge","ml.g6e.2xlarge"]
 
 # 模版选项
-branch_types = ["flux","master","async"]
+branch_types = ["flux","master","latest"]
 
 ### gui utility functions
 def parse_json(file):

@@ -1,4 +1,9 @@
-    FROM nvcr.io/nvidia/pytorch:23.05-py3
+FROM nvcr.io/nvidia/pytorch:23.05-py3
+
+# Define build argument for Black Forest Labs API key
+ARG BLACK_FOREST_KEY
+ENV BLACK_FOREST_KEY=${BLACK_FOREST_KEY}
+
 RUN mkdir -p /opt/program
 RUN chmod 777 /opt/program
 #FROM public.ecr.aws/o7x6j3x6/sd-dreambooth-finetuning-v2
@@ -16,32 +21,84 @@ ENV PATH="/opt/program:${PATH}"
 COPY ComfyUI /opt/program
 RUN pip install -r /opt/program/requirements.txt
 
-####upgrade torch/torchversion/cuda121 relevant dependence
-RUN pip install torch torchvision --upgrade --index-url https://download.pytorch.org/whl/cu121
-RUN pip install -U xformers
+
+RUN pip install -U xformers==0.0.27 --no-deps
 RUN pip install scikit-image
 RUN pip install imageio_ffmpeg
 RUN pip install wget
 RUN pip install retry
+RUN pip install blend_modes
+RUN pip install transparent_background
 #RUN apt install net-tools
 
 ###download relevant models
 RUN wget https://huggingface.co/mmmoof1/vae-ft-mse-840000-ema-pruned/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors
 RUN mv ./vae*.safetensors /opt/program/models/vae/
-
+RUN wget https://huggingface.co/openai/clip-vit-large-patch14/resolve/main/model.safetensors
+RUN mv ./model.safetensors /opt/program/models/text_encoders/clip_l.safetensors
+RUN wget https://huggingface.co/fmoraes2k/t5xxl_fp8_e4m3fn.safetensors/resolve/main/t5xxl_fp8_e4m3fn.safetensors
+RUN mv ./t5xxl_fp8_e4m3fn.safetensors /opt/program/models/text_encoders/t5xxl_fp8_e4m3fn.safetensors
+RUN wget https://huggingface.co/Comfy-Org/flux1-kontext-dev_ComfyUI/resolve/main/split_files/diffusion_models/flux1-dev-kontext_fp8_scaled.safetensors
+RUN mv ./flux1-dev-kontext_fp8_scaled.safetensors /opt/program/models/diffusion_models/flux1-dev-kontext_fp8_scaled.safetensors
 
 
 ###install relevant ComfyUI nodes
-RUN git clone https://github.com/pythongosssss/ComfyUI-Custom-Scripts /opt/program/custom_nodes/ComfyUI-Custom-Scripts
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/program/custom_nodes/ComfyUI-Manager
-RUN git clone https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet.git /opt/program/custom_nodes/ComfyUI-Advanced-ControlNet
-RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git /opt/program/custom_nodes/comfyui_controlnet_aux
+RUN git clone https://github.com/qingyuan18/comfyui-llm-node-for-amazon-bedrock.git  /opt/program/custom_nodes/comfyui-llm-node-for-amazon-bedrock
+RUN git clone -b latest https://github.com/qingyuan18/ComfyUI_LayerStyle.git  /opt/program/custom_nodes/ComfyUI_LayerStyle
+RUN git clone https://github.com/chflame163/ComfyUI_LayerStyle_Advance.git /opt/program/custom_nodes/ComfyUI_LayerStyle_Advance
+RUN git clone https://github.com/Acly/comfyui-tooling-nodes.git    /opt/program/custom_nodes/comfyui-tooling-nodes
+RUN git clone https://github.com/ShmuelRonen/FluxKontextCreator.git /opt/program/custom_nodes/FluxKontextCreator
+
+# Create config.ini for FluxKontextCreator
+RUN echo "[API]" > /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "# Your Black Forest Labs API key" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "X_KEY=${BLACK_FOREST_KEY}" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "# API endpoint (use api.bfl.ai, not api.bfl.ml)" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "BASE_URL=https://api.bfl.ai" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "[SETTINGS]" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "# Default timeout for API requests (seconds)" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "TIMEOUT=60" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "# Default safety tolerance (0-6)" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "SAFETY_TOLERANCE=4" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "# Default output format (png/jpeg)" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini && \
+    echo "OUTPUT_FORMAT=png" >> /opt/program/custom_nodes/FluxKontextCreator/config.ini
+
 
 
 ####install relevant http/socket client（for unicorn web server）
 RUN pip3 install websocket-client
 RUN pip3 install pydantic
+RUN pip install loguru
+RUN pip install typer_config
+RUN pip install --no-deps diffusers
+RUN pip install omegaconf
 
+####install layer style needs module 
+RUN mkdir -p /opt/program/web/extensions/dzNodes
+RUN pip install --no-cache-dir --force-reinstall  pillow
+RUN apt-get update && apt-get install -y libgl1-mesa-glx
+RUN pip install opencv-fixer==0.2.5
+RUN python -c "from opencv_fixer import AutoFix; AutoFix()"
+RUN pip install --no-deps protobuf==3.20.3
+RUN pip install --no-deps mediapipe
+RUN pip install --no-deps segment_anything
+RUN pip install addict
+RUN pip install yapf
+RUN pip install openai
+
+
+
+####install paddle ocr relavant module
+RUN pip install paddlepaddle-gpu==2.6.2
+RUN pip install paddleocr==2.10.0
+
+####upgrade torch/torchversion/cuda121 relevant dependence
+RUN pip install -U torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 
 #####start comfyui
 RUN chmod 755 /opt/program
